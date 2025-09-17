@@ -5,17 +5,16 @@ import { deleteProject, getProjectById, updateProject } from "@/lib/services/pro
 import { projectUpdateSchema } from "@/lib/validation/project";
 import { Role } from "@prisma/client";
 
-interface Context {
-  params: { projectId: string };
-}
+type RouteContext = { params: Promise<{ projectId: string }> };
 
-export async function GET(_request: Request, { params }: Context) {
+export async function GET(_request: Request, context: RouteContext) {
+  const { projectId } = await context.params;
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const project = await getProjectById(params.projectId);
+  const project = await getProjectById(projectId);
   if (!project) {
     return NextResponse.json({ message: "Not found" }, { status: 404 });
   }
@@ -30,7 +29,8 @@ export async function GET(_request: Request, { params }: Context) {
   return NextResponse.json(project);
 }
 
-export async function PATCH(request: Request, { params }: Context) {
+export async function PATCH(request: Request, context: RouteContext) {
+  const { projectId } = await context.params;
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -48,7 +48,7 @@ export async function PATCH(request: Request, { params }: Context) {
 
   const data = parsed.data;
 
-  const project = await updateProject(params.projectId, {
+  const project = await updateProject(projectId, {
     ...data,
     startDate: data.startDate ? new Date(data.startDate) : undefined,
     endDate: data.endDate ? new Date(data.endDate) : undefined,
@@ -57,12 +57,13 @@ export async function PATCH(request: Request, { params }: Context) {
   return NextResponse.json(project);
 }
 
-export async function DELETE(_request: Request, { params }: Context) {
+export async function DELETE(_request: Request, context: RouteContext) {
+  const { projectId } = await context.params;
   const session = await auth();
   if (!session?.user || session.user.role === Role.MEMBER) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 
-  await deleteProject(params.projectId);
+  await deleteProject(projectId);
   return NextResponse.json({ ok: true });
 }

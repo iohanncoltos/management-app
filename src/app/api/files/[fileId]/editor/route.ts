@@ -6,14 +6,17 @@ import { buildOnlyOfficeConfig } from "@/lib/onlyoffice";
 import { getR2SignedUrl } from "@/lib/r2";
 import { Role } from "@prisma/client";
 
-export async function POST(_request: Request, { params }: { params: { fileId: string } }) {
+type RouteContext = { params: Promise<{ fileId: string }> };
+
+export async function POST(_request: Request, context: RouteContext) {
+  const { fileId } = await context.params;
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
   const file = await prisma.file.findUnique({
-    where: { id: params.fileId },
+    where: { id: fileId },
     include: {
       project: {
         select: {

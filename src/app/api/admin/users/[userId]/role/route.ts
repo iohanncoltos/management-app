@@ -7,10 +7,10 @@ import { z } from "zod";
 
 const schema = z.object({ role: z.nativeEnum(Role) });
 
-type RouteContext = Promise<{ params: { userId: string } }>;
+type RouteContext = { params: Promise<{ userId: string }> };
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const { params } = await context;
+  const { userId } = await context.params;
   const session = await auth();
   if (!session?.user || session.user.role !== Role.ADMIN) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
@@ -22,10 +22,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ message: "Invalid payload" }, { status: 400 });
   }
 
-  if (params.userId === session.user.id) {
+  if (userId === session.user.id) {
     return NextResponse.json({ message: "Cannot modify own role" }, { status: 400 });
   }
 
-  const result = await updateUserRole(params.userId, parsed.data.role);
+  const result = await updateUserRole(userId, parsed.data.role);
   return NextResponse.json({ id: result.id, role: result.role });
 }
