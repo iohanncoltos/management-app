@@ -8,13 +8,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 import { getProjectById } from "@/lib/services/project-service";
 
-export default async function ProjectBudgetPage({ params }: { params: { projectId: string } }) {
+type ProjectBudgetPageProps = {
+  params: Promise<{ projectId: string }>;
+};
+
+export default async function ProjectBudgetPage({ params }: ProjectBudgetPageProps) {
+  const { projectId } = await params;
   const session = await auth();
   if (!session?.user) {
     notFound();
   }
 
-  const project = await getProjectById(params.projectId);
+  const project = await getProjectById(projectId);
   if (!project) {
     notFound();
   }

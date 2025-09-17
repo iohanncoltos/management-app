@@ -7,13 +7,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { auth } from "@/lib/auth";
 import { listFilesForProject } from "@/lib/services/file-service";
 
-export default async function ProjectFilesPage({ params }: { params: { projectId: string } }) {
+type ProjectFilesPageProps = {
+  params: Promise<{ projectId: string }>;
+};
+
+export default async function ProjectFilesPage({ params }: ProjectFilesPageProps) {
+  const { projectId } = await params;
   const session = await auth();
   if (!session?.user) {
     notFound();
   }
 
-  const files = await listFilesForProject(params.projectId);
+  const files = await listFilesForProject(projectId);
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -45,7 +50,7 @@ export default async function ProjectFilesPage({ params }: { params: { projectId
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{file.createdBy?.name}</TableCell>
                   <TableCell className="text-right text-sm space-x-3">
-                    <Link href={`/projects/${params.projectId}/files/${file.id}`} className="text-accent hover:text-primary">
+                    <Link href={`/projects/${projectId}/files/${file.id}`} className="text-accent hover:text-primary">
                       Open
                     </Link>
                     <Link href={`/api/files/${file.id}/download`} className="text-muted-foreground hover:text-primary">
@@ -70,7 +75,7 @@ export default async function ProjectFilesPage({ params }: { params: { projectId
           <CardTitle>Upload Artifact</CardTitle>
         </CardHeader>
         <CardContent>
-          <FileUpload projectId={params.projectId} />
+          <FileUpload projectId={projectId} />
         </CardContent>
       </Card>
     </div>

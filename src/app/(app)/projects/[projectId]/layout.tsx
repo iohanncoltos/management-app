@@ -9,18 +9,19 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 interface ProjectLayoutProps {
-  params: { projectId: string };
+  params: Promise<{ projectId: string }>;
   children: React.ReactNode;
 }
 
 export default async function ProjectLayout({ params, children }: ProjectLayoutProps) {
+  const { projectId } = await params;
   const session = await auth();
   if (!session?.user) {
     notFound();
   }
 
   const project = await prisma.project.findUnique({
-    where: { id: params.projectId },
+    where: { id: projectId },
     include: {
       tasks: { select: { id: true, assigneeId: true } },
     },
@@ -37,12 +38,12 @@ export default async function ProjectLayout({ params, children }: ProjectLayoutP
     notFound();
   }
 
-  const basePath = `/projects/${params.projectId}`;
+  const basePath = `/projects/${projectId}`;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`${project.code} â€” ${project.name}`}
+        title={`${project.code} ??'???? ${project.name}`}
         description={`Mission window ${project.startDate.toLocaleDateString()} to ${
           project.endDate ? project.endDate.toLocaleDateString() : "TBD"
         }`}
@@ -53,3 +54,4 @@ export default async function ProjectLayout({ params, children }: ProjectLayoutP
     </div>
   );
 }
+

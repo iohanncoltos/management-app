@@ -7,14 +7,19 @@ import { buildOnlyOfficeConfig } from "@/lib/onlyoffice";
 import { getR2SignedUrl } from "@/lib/r2";
 import { Role } from "@prisma/client";
 
-export default async function FileEditorPage({ params }: { params: { projectId: string; fileId: string } }) {
+type FileEditorPageProps = {
+  params: Promise<{ projectId: string; fileId: string }>;
+};
+
+export default async function FileEditorPage({ params }: FileEditorPageProps) {
+  const { projectId, fileId } = await params;
   const session = await auth();
   if (!session?.user) {
     notFound();
   }
 
   const file = await prisma.file.findUnique({
-    where: { id: params.fileId },
+    where: { id: fileId },
     include: {
       project: {
         select: {
@@ -25,7 +30,7 @@ export default async function FileEditorPage({ params }: { params: { projectId: 
     },
   });
 
-  if (!file || file.projectId !== params.projectId) {
+  if (!file || file.projectId !== projectId) {
     notFound();
   }
 

@@ -9,14 +9,19 @@ import { auth } from "@/lib/auth";
 import { listTasksByProject } from "@/lib/services/task-service";
 import { listAssignableUsers } from "@/lib/services/user-service";
 
-export default async function ProjectTasksPage({ params }: { params: { projectId: string } }) {
+type ProjectTasksPageProps = {
+  params: Promise<{ projectId: string }>;
+};
+
+export default async function ProjectTasksPage({ params }: ProjectTasksPageProps) {
+  const { projectId } = await params;
   const session = await auth();
   if (!session?.user) {
     notFound();
   }
 
   const [tasks, users] = await Promise.all([
-    listTasksByProject(params.projectId),
+    listTasksByProject(projectId),
     listAssignableUsers(session.user.id, session.user.role),
   ]);
 
@@ -53,7 +58,7 @@ export default async function ProjectTasksPage({ params }: { params: { projectId
           </CardHeader>
           <CardContent>
             <TaskCreateForm
-              projectId={params.projectId}
+              projectId={projectId}
               users={users}
               tasks={taskModels.map((task) => ({ id: task.id, title: task.title }))}
             />

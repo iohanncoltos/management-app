@@ -7,13 +7,18 @@ import { Progress } from "@/components/ui/progress";
 import { auth } from "@/lib/auth";
 import { getProjectById } from "@/lib/services/project-service";
 
-export default async function ProjectOverviewPage({ params }: { params: { projectId: string } }) {
+type ProjectOverviewPageProps = {
+  params: Promise<{ projectId: string }>;
+};
+
+export default async function ProjectOverviewPage({ params }: ProjectOverviewPageProps) {
+  const { projectId } = await params;
   const session = await auth();
   if (!session?.user) {
     notFound();
   }
 
-  const project = await getProjectById(params.projectId);
+  const project = await getProjectById(projectId);
   if (!project) {
     notFound();
   }
@@ -87,7 +92,7 @@ export default async function ProjectOverviewPage({ params }: { params: { projec
                       {task.assignee ? task.assignee.name : "Unassigned"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {task.start.toLocaleDateString()} → {task.end.toLocaleDateString()}
+                      {task.start.toLocaleDateString()}  {task.end.toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right text-sm text-foreground">{task.progress}%</TableCell>
                   </TableRow>
@@ -130,3 +135,5 @@ export default async function ProjectOverviewPage({ params }: { params: { projec
     </div>
   );
 }
+
+

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as SheetPrimitive from "@radix-ui/react-dialog";
 import * as React from "react";
@@ -24,26 +24,37 @@ const SheetOverlay = React.forwardRef<
 ));
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
+type SheetContentBaseProps = React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>;
+type SheetContentProps = SheetContentBaseProps & {
+  side?: "left" | "right";
+};
+
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content> & { side?: "left" | "right" }
->(({ className, children, side = "right", ...props }, ref) => (
-  <SheetPortal>
-    <SheetOverlay />
-    <SheetPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed z-50 flex h-full w-full max-w-md flex-col border border-border/60 bg-panel-gradient p-6 shadow-2xl transition ease-in-out",
-        side === "right" && "right-0 top-0",
-        side === "left" && "left-0 top-0",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </SheetPrimitive.Content>
-  </SheetPortal>
-));
+  SheetContentProps
+>(({ className, children, side = "right", ...rest }, ref) => {
+  const contentProps = rest as SheetContentBaseProps;
+  const ariaLabel = contentProps["aria-label"] ?? "Sheet dialog";
+
+  return (
+    <SheetPortal>
+      <SheetOverlay />
+      <SheetPrimitive.Content
+        ref={ref}
+        {...contentProps}
+        aria-label={ariaLabel}
+        className={cn(
+          "fixed z-50 flex h-full w-full max-w-md flex-col border border-border/60 bg-panel-gradient p-6 shadow-2xl transition ease-in-out",
+          side === "right" && "right-0 top-0",
+          side === "left" && "left-0 top-0",
+          className,
+        )}
+      >
+        {children}
+      </SheetPrimitive.Content>
+    </SheetPortal>
+  );
+});
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 
 const SheetHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

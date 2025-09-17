@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import { withAuth } from "next-auth/middleware";
+import type { NextRequestWithAuth } from "next-auth/middleware";
 
 import { Role } from "@prisma/client";
 
 const ADMIN_PATHS = ["/admin"];
 
 export default withAuth(
-  function middleware(request: NextRequest) {
+  function middleware(request: NextRequestWithAuth) {
     const token = request.nextauth.token;
 
     if (!token?.sub) {

@@ -7,7 +7,10 @@ import { z } from "zod";
 
 const schema = z.object({ role: z.nativeEnum(Role) });
 
-export async function PATCH(request: Request, { params }: { params: { userId: string } }) {
+type RouteContext = Promise<{ params: { userId: string } }>;
+
+export async function PATCH(request: Request, context: RouteContext) {
+  const { params } = await context;
   const session = await auth();
   if (!session?.user || session.user.role !== Role.ADMIN) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });

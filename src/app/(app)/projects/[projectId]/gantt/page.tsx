@@ -6,13 +6,18 @@ import { ProjectGantt } from "@/components/projects/project-gantt";
 import { auth } from "@/lib/auth";
 import { listTasksByProject } from "@/lib/services/task-service";
 
-export default async function ProjectGanttPage({ params }: { params: { projectId: string } }) {
+type ProjectGanttPageProps = {
+  params: Promise<{ projectId: string }>;
+};
+
+export default async function ProjectGanttPage({ params }: ProjectGanttPageProps) {
+  const { projectId } = await params;
   const session = await auth();
   if (!session?.user) {
     notFound();
   }
 
-  const tasks = await listTasksByProject(params.projectId);
+  const tasks = await listTasksByProject(projectId);
 
   if (
     session.user.role === Role.MEMBER &&

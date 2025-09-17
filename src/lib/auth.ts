@@ -1,7 +1,7 @@
 ﻿import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { AuditEventType, Role } from "@prisma/client";
 import { argon2id, hash as argon2Hash, verify as argon2Verify } from "argon2";
-import NextAuth, { type NextAuthOptions } from "next-auth";
+import NextAuth, { getServerSession, type NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 
@@ -119,12 +119,11 @@ export const authConfig: NextAuthOptions = {
   },
 };
 
-export const {
-  handlers: { GET, POST },
-  auth,
-  signIn,
-  signOut,
-} = NextAuth(authConfig);
+const handler = NextAuth(authConfig);
+
+export { handler as GET, handler as POST };
+
+export const auth = () => getServerSession(authConfig);
 
 export type SessionUser = {
   id: string;
