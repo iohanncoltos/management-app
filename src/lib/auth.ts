@@ -38,9 +38,12 @@ export const authConfig: NextAuthOptions = {
     signOut: "/login",
     error: "/login",
   },
-  trustHost: true,
   providers: [
     Credentials({
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
       authorize: async (credentials) => {
         const parsed = credentialsSchema.safeParse(credentials);
         if (!parsed.success) {

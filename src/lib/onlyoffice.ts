@@ -1,4 +1,4 @@
-﻿import jwt from "jsonwebtoken";
+﻿import jwt, { type SignOptions } from "jsonwebtoken";
 
 import { env } from "./env";
 
@@ -26,8 +26,8 @@ const defaultPermissions: DocumentPermissions = {
   print: true,
 };
 
-export function createOnlyOfficeJwt(payload: Record<string, unknown>, expiresIn: string | number = "10m") {
-  return jwt.sign(payload, env.server.ONLYOFFICE_JWT_SECRET, { expiresIn, algorithm: "HS256" });
+export function createOnlyOfficeJwt(payload: Record<string, unknown>, expiresIn: SignOptions["expiresIn"] = "10m") {
+  return jwt.sign(payload, env.server.ONLYOFFICE_JWT_SECRET, { expiresIn, algorithm: "HS256" } satisfies SignOptions);
 }
 
 export function buildOnlyOfficeConfig({

@@ -1,4 +1,4 @@
-import { AuditEventType, Prisma } from "@prisma/client";
+﻿import { AuditEventType, Prisma } from "@prisma/client";
 import { prisma } from "./db";
 
 interface AuditParams {
@@ -6,7 +6,7 @@ interface AuditParams {
   type: AuditEventType;
   entity: string;
   entityId: string;
-  data?: Record<string, unknown> | null;
+  data?: Prisma.JsonValue;
 }
 
 export async function recordAuditEvent({
