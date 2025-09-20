@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { auth } from "@/lib/auth";
-import { getProjectById } from "@/lib/services/project-service";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { canViewProject, requireSession } from "@/lib/authz";
+import { prisma } from "@/lib/db";
 
 type ProjectOverviewPageProps = {
   params: Promise<{ projectId: string }>;
@@ -13,12 +13,38 @@ type ProjectOverviewPageProps = {
 
 export default async function ProjectOverviewPage({ params }: ProjectOverviewPageProps) {
   const { projectId } = await params;
-  const session = await auth();
-  if (!session?.user) {
+  const session = await requireSession();
+
+  const allowed = await canViewProject(session.user.id, projectId);
+  if (!allowed) {
     notFound();
   }
 
-  const project = await getProjectById(projectId);
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: {
+      tasks: {
+        include: {
+          assignee: { select: { id: true, name: true, email: true } },
+          assignments: {
+            select: {
+              user: { select: { id: true, name: true } },
+              allocationPct: true,
+            },
+          },
+        },
+        orderBy: { start: "asc" },
+      },
+      files: {
+        include: {
+          createdBy: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
+
   if (!project) {
     notFound();
   }
@@ -26,6 +52,12 @@ export default async function ProjectOverviewPage({ params }: ProjectOverviewPag
   const totalTasks = project.tasks.length;
   const completeTasks = project.tasks.filter((task) => task.progress === 100).length;
   const progress = totalTasks ? Math.round((completeTasks / totalTasks) * 100) : 0;
+
+  const startDateLabel = project.startDate ? project.startDate.toLocaleDateString() : "TBD";
+  const endDateLabel = project.endDate ? project.endDate.toLocaleDateString() : "TBD";
+
+  const plannedBudget = project.budgetPlanned ? Number(project.budgetPlanned).toLocaleString() : "-";
+  const actualBudget = project.budgetActual ? Number(project.budgetActual).toLocaleString() : "-";
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -45,15 +77,11 @@ export default async function ProjectOverviewPage({ params }: ProjectOverviewPag
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Budget Planned</p>
-              <p className="text-lg font-semibold text-foreground">
-                ${Number(project.budgetPlanned).toLocaleString()}
-              </p>
+              <p className="text-lg font-semibold text-foreground">${plannedBudget}</p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Budget Actual</p>
-              <p className="text-lg font-semibold text-foreground">
-                ${Number(project.budgetActual).toLocaleString()}
-              </p>
+              <p className="text-lg font-semibold text-foreground">${actualBudget}</p>
             </div>
             <div className="md:col-span-2">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Mission Progress</p>
@@ -92,7 +120,7 @@ export default async function ProjectOverviewPage({ params }: ProjectOverviewPag
                       {task.assignee ? task.assignee.name : "Unassigned"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {task.start.toLocaleDateString()}  {task.end.toLocaleDateString()}
+                      {task.start.toLocaleDateString()} - {task.end.toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right text-sm text-foreground">{task.progress}%</TableCell>
                   </TableRow>
@@ -117,13 +145,11 @@ export default async function ProjectOverviewPage({ params }: ProjectOverviewPag
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <div className="flex items-center justify-between">
               <span>Initiated</span>
-              <span className="font-medium text-foreground">{project.startDate.toLocaleDateString()}</span>
+              <span className="font-medium text-foreground">{startDateLabel}</span>
             </div>
             <div className="flex items-center justify-between">
               <span>Target Complete</span>
-              <span className="font-medium text-foreground">
-                {project.endDate ? project.endDate.toLocaleDateString() : "TBD"}
-              </span>
+              <span className="font-medium text-foreground">{endDateLabel}</span>
             </div>
             <div className="flex items-center justify-between">
               <span>Documents</span>
@@ -135,5 +161,7 @@ export default async function ProjectOverviewPage({ params }: ProjectOverviewPag
     </div>
   );
 }
+
+
 
 

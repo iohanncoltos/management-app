@@ -1,11 +1,9 @@
 import { notFound } from "next/navigation";
 
-import { Role } from "@prisma/client";
-
 import { ProjectTabs } from "@/components/projects/project-tabs";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
-import { auth } from "@/lib/auth";
+import { canViewProject, requireSession } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 
 interface ProjectLayoutProps {
@@ -15,10 +13,7 @@ interface ProjectLayoutProps {
 
 export default async function ProjectLayout({ params, children }: ProjectLayoutProps) {
   const { projectId } = await params;
-  const session = await auth();
-  if (!session?.user) {
-    notFound();
-  }
+  const session = await requireSession();
 
   const project = await prisma.project.findUnique({
     where: { id: projectId },
@@ -31,20 +26,19 @@ export default async function ProjectLayout({ params, children }: ProjectLayoutP
     notFound();
   }
 
-  if (
-    session.user.role === Role.MEMBER &&
-    !project.tasks.some((task) => task.assigneeId === session.user.id)
-  ) {
+  const allowed = await canViewProject(session.user.id, projectId);
+  if (!allowed) {
     notFound();
   }
+
 
   const basePath = `/projects/${projectId}`;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`${project.code} ??'???? ${project.name}`}
-        description={`Mission window ${project.startDate.toLocaleDateString()} to ${
+        title={`${project.code} - ${project.name}`}
+        description={`Mission window ${project.startDate?.toLocaleDateString() ?? "TBD"} to ${
           project.endDate ? project.endDate.toLocaleDateString() : "TBD"
         }`}
         actions={<Badge variant="outline">{project.status}</Badge>}
@@ -54,4 +48,3 @@ export default async function ProjectLayout({ params, children }: ProjectLayoutP
     </div>
   );
 }
-

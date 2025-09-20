@@ -1,12 +1,18 @@
-import { Prisma, ProjectStatus, Role } from "@prisma/client";
+import { Prisma, ProjectStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 
-export async function listProjectsForUser(userId: string, role: Role) {
-  const where = role === Role.MEMBER ? { tasks: { some: { assigneeId: userId } } } : {};
+export async function listProjectsForUser(userId: string, permissions: string[]) {
+  const canViewAll = permissions.includes("CREATE_PROJECT") || permissions.includes("MANAGE_USERS");
 
   const projects = await prisma.project.findMany({
-    where,
+    where: canViewAll
+      ? undefined
+      : {
+          memberships: {
+            some: { userId },
+          },
+        },
     include: {
       _count: { select: { tasks: true, files: true } },
       tasks: {
@@ -14,7 +20,6 @@ export async function listProjectsForUser(userId: string, role: Role) {
           id: true,
           progress: true,
           end: true,
-          assigneeId: true,
         },
       },
     },
@@ -32,8 +37,8 @@ export async function listProjectsForUser(userId: string, role: Role) {
       status: project.status,
       startDate: project.startDate,
       endDate: project.endDate,
-      budgetPlanned: project.budgetPlanned,
-      budgetActual: project.budgetActual,
+      budgetPlanned: project.budgetPlanned ?? new Prisma.Decimal(0),
+      budgetActual: project.budgetActual ?? new Prisma.Decimal(0),
       tasksTotal: project.tasks.length,
       tasksComplete: complete,
       tasksOverdue: overdueTasks,
@@ -46,17 +51,26 @@ export async function createProject(data: {
   name: string;
   code: string;
   status?: ProjectStatus;
-  startDate: Date;
+  startDate?: Date | null;
   endDate?: Date | null;
-  budgetPlanned: Prisma.Decimal | number;
-  budgetActual?: Prisma.Decimal | number;
   createdById: string;
+  memberUserIds?: string[];
 }) {
+  const members = data.memberUserIds?.length
+    ? await prisma.user.findMany({ where: { id: { in: data.memberUserIds } }, select: { id: true } })
+    : [];
+
   return prisma.project.create({
     data: {
-      ...data,
+      code: data.code,
+      name: data.name,
       status: data.status ?? ProjectStatus.PLANNING,
-      budgetActual: data.budgetActual ?? new Prisma.Decimal(0),
+      startDate: data.startDate ?? undefined,
+      endDate: data.endDate ?? undefined,
+      createdById: data.createdById,
+      memberships: {
+        create: members.map(({ id }) => ({ userId: id })),
+      },
     },
   });
 }
@@ -83,6 +97,7 @@ export async function getProjectById(projectId: string) {
         },
         orderBy: { createdAt: "desc" },
       },
+      memberships: true,
     },
   });
 }

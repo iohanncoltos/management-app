@@ -40,7 +40,7 @@ type UpcomingTask = {
   title: string;
   end: string | Date;
   progress: number;
-  project: { id: string; name: string; code: string };
+  project: { id: string; name: string; code: string } | null;
 };
 
 interface DashboardClientProps {
@@ -227,8 +227,14 @@ export function DashboardClient({ metrics, performance, taskBreakdown, upcoming 
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm font-medium text-foreground">{task.project.code}</span>
-                        <p className="text-xs text-muted-foreground">{task.project.name}</p>
+                        {task.project ? (
+                          <>
+                            <span className="text-sm font-medium text-foreground">{task.project.code}</span>
+                            <p className="text-xs text-muted-foreground">{task.project.name}</p>
+                          </>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">No Project</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm text-foreground">{format(dueDate, "dd MMM")}</div>

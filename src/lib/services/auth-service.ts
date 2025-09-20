@@ -1,4 +1,3 @@
-import { Role } from "@prisma/client";
 import { randomBytes } from "crypto";
 import { addMinutes } from "date-fns";
 
@@ -7,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { sendPasswordResetEmail } from "@/lib/mail";
 import { recordAuditEvent } from "@/lib/audit";
 import { AuditEventType } from "@prisma/client";
+import { DEFAULT_USER_ROLE_NAME } from "@/lib/roles";
 
 const RESET_EXPIRY_MINUTES = 30;
 
@@ -20,7 +20,7 @@ export async function registerUser({
   name: string;
   email: string;
   password: string;
-  role?: Role;
+  role?: string | null;
   createdById?: string;
 }) {
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -30,12 +30,22 @@ export async function registerUser({
 
   const passwordHash = await hashPassword(password);
 
+  const resolvedRole = role ?? DEFAULT_USER_ROLE_NAME;
+  const roleRecord = await prisma.role.findUnique({ where: { name: resolvedRole } });
+
   const user = await prisma.user.create({
     data: {
       name,
       email,
       passwordHash,
-      role: role ?? Role.MEMBER,
+      roleId: roleRecord?.id,
+    },
+    include: {
+      role: {
+        select: {
+          name: true,
+        },
+      },
     },
   });
 
@@ -44,7 +54,7 @@ export async function registerUser({
     entity: "user",
     entityId: user.id,
     userId: createdById ?? user.id,
-    data: { action: "register", role: user.role },
+    data: { action: "register", role: user.role?.name ?? null },
   });
 
   return user;

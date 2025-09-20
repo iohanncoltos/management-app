@@ -1,75 +1,85 @@
-﻿"use client";
+"use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ProjectStatus } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { projectCreateSchema } from "@/lib/validation/project";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
-const statusOptions = [
-  { value: "PLANNING", label: "Planning" },
-  { value: "ACTIVE", label: "Active" },
-  { value: "ON_HOLD", label: "On Hold" },
-  { value: "COMPLETED", label: "Completed" },
-  { value: "CLOSED", label: "Closed" },
-];
+const schema = z.object({
+  code: z.string().min(2).max(32),
+  name: z.string().min(2).max(160),
+  status: z.nativeEnum(ProjectStatus).optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  memberUserIds: z.array(z.string().cuid()).optional(),
+});
 
-function normalizeDateValue(value: string | Date | undefined | null) {
-  if (!value) return "";
-  if (typeof value === "string") return value;
-  return value.toISOString().slice(0, 10);
-}
+type ProjectFormProps = {
+  users: Array<{ id: string; name: string; email: string; role: string }>;
+  statuses: string[];
+};
 
-export function ProjectForm() {
+type FormValues = z.infer<typeof schema>;
+
+export function ProjectForm({ users, statuses }: ProjectFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<z.infer<typeof projectCreateSchema>>({
-    resolver: zodResolver(projectCreateSchema),
+  const form = useForm<FormValues>({
+    resolver: zodResolver(schema),
     defaultValues: {
-      name: "",
       code: "",
-      status: "PLANNING",
-      startDate: new Date().toISOString().slice(0, 10),
+      name: "",
+      status: undefined,
+      startDate: "",
       endDate: "",
-      budgetPlanned: 0,
-      budgetActual: 0,
+      memberUserIds: [],
     },
   });
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
       try {
-        const res = await fetch("/api/projects", {
+        const response = await fetch("/api/projects", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            ...values,
-            budgetPlanned: Number(values.budgetPlanned),
-            budgetActual: Number(values.budgetActual ?? 0),
+            code: values.code,
+            name: values.name,
+            status: values.status,
+            startDate: values.startDate || undefined,
+            endDate: values.endDate || undefined,
+            memberUserIds: values.memberUserIds ?? [],
           }),
         });
 
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.message ?? "Unable to create project");
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.message ?? "Unable to create project");
         }
 
-        const project = await res.json();
-        toast.success("Mission deployed", {
-          description: `${values.name} is now live in the command center.`,
-        });
+        const project = await response.json();
+        toast.success("Mission deployed");
         router.replace(`/projects/${project.id}`);
       } catch (error) {
         toast.error("Deployment failed", {
-          description: error instanceof Error ? error.message : "Please retry shortly.",
+          description: error instanceof Error ? error.message : "Try again shortly.",
         });
       }
     });
@@ -79,19 +89,6 @@ export function ProjectForm() {
     <Form {...form}>
       <form onSubmit={onSubmit} className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Mission Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Orbital Defense Upgrade" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
           <FormField
             control={form.control}
             name="code"
@@ -105,6 +102,19 @@ export function ProjectForm() {
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Mission Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Orbital Defense Upgrade" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           <FormField
@@ -113,16 +123,16 @@ export function ProjectForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Status</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
+                <Select value={field.value ?? ""} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {statusOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                    {statuses.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status.replace("_", " ")}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -138,12 +148,7 @@ export function ProjectForm() {
               <FormItem>
                 <FormLabel>Start Date</FormLabel>
                 <FormControl>
-                  <Input
-                    type="date"
-                    {...field}
-                    value={normalizeDateValue(field.value)}
-                    onChange={(event) => field.onChange(event.target.value)}
-                  />
+                  <Input type="date" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -154,60 +159,58 @@ export function ProjectForm() {
             name="endDate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Target Completion</FormLabel>
+                <FormLabel>End Date</FormLabel>
                 <FormControl>
-                  <Input
-                    type="date"
-                    {...field}
-                    value={normalizeDateValue(field.value)}
-                    onChange={(event) => field.onChange(event.target.value)}
-                  />
+                  <Input type="date" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="budgetPlanned"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Planned Budget (USD)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    {...field}
-                    onChange={(event) => field.onChange(Number(event.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="budgetActual"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Current Actual (USD)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    {...field}
-                    onChange={(event) => field.onChange(Number(event.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <Button type="submit" className="w-full" disabled={isPending}>
-          {isPending ? "Deploying" : "Deploy Mission"}
+        <FormField
+          control={form.control}
+          name="memberUserIds"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Assign Operators</FormLabel>
+              <div className="space-y-2 rounded-2xl border border-border/60 p-3">
+                {users.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No operators available.</p>
+                ) : null}
+                {users.map((user) => {
+                  const checked = field.value?.includes(user.id) ?? false;
+                  return (
+                    <label
+                      key={user.id}
+                      className="flex items-center justify-between rounded-xl bg-secondary/40 px-3 py-2 text-sm text-muted-foreground"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium text-foreground">{user.name}</span>
+                        <span className="text-xs">{user.email}</span>
+                      </div>
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(value) => {
+                          const next = new Set(field.value ?? []);
+                          if (value) {
+                            next.add(user.id);
+                          } else {
+                            next.delete(user.id);
+                          }
+                          field.onChange(Array.from(next));
+                        }}
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" disabled={isPending} className="w-full">
+          {isPending ? "Deploying..." : "Deploy Mission"}
         </Button>
       </form>
     </Form>

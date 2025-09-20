@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
+import { canViewProject } from "@/lib/authz";
 import { getR2SignedUrl } from "@/lib/r2";
 import { prisma } from "@/lib/db";
-import { Role } from "@prisma/client";
 
 type RouteContext = { params: Promise<{ fileId: string }> };
 
@@ -30,11 +30,13 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ message: "Not found" }, { status: 404 });
   }
 
-  if (
-    session.user.role === Role.MEMBER &&
-    file.createdById !== session.user.id &&
-    !file.project.tasks.some((task) => task.assigneeId === session.user.id)
-  ) {
+  const canDownload =
+    session.user.permissions.includes("VIEW_PROJECT") ||
+    file.createdById === session.user.id ||
+    file.project.tasks.some((task) => task.assigneeId === session.user.id) ||
+    (await canViewProject(session.user.id, file.project.id));
+
+  if (!canDownload) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 

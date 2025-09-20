@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { taskCreateSchema } from "@/lib/validation/task";
+import { TaskStatus, TaskPriority, TaskCategory } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -22,8 +22,21 @@ function normalizeDate(value: string | Date | undefined) {
   return value.toISOString().slice(0, 10);
 }
 
-const schema = taskCreateSchema.omit({ projectId: true }).extend({
+const schema = z.object({
   projectId: z.string().cuid(),
+  title: z.string().min(2).max(255),
+  description: z.string().max(2000).optional(),
+  start: z.string().or(z.date()),
+  end: z.string().or(z.date()),
+  progress: z.number().int().min(0).max(100),
+  priority: z.nativeEnum(TaskPriority),
+  category: z.nativeEnum(TaskCategory),
+  status: z.nativeEnum(TaskStatus),
+  estimatedHours: z.number().int().min(1).max(1000).nullable().optional(),
+  actualHours: z.number().int().min(0).max(1000).nullable().optional(),
+  parentId: z.string().cuid().nullable().optional(),
+  assigneeId: z.string().cuid().nullable().optional(),
+  dependsOn: z.array(z.string().cuid()),
 });
 
 interface TaskCreateFormProps {
@@ -46,6 +59,9 @@ export function TaskCreateForm({ projectId, users, tasks, onCreated }: TaskCreat
       start: new Date().toISOString().slice(0, 10),
       end: new Date().toISOString().slice(0, 10),
       progress: 0,
+      priority: TaskPriority.MEDIUM,
+      category: TaskCategory.PROJECT_WORK,
+      status: TaskStatus.NOT_STARTED,
       assigneeId: undefined,
       dependsOn: [],
     },
@@ -112,7 +128,6 @@ export function TaskCreateForm({ projectId, users, tasks, onCreated }: TaskCreat
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
                     {users.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.name}

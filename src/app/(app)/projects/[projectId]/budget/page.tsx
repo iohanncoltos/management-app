@@ -1,32 +1,47 @@
 import { notFound } from "next/navigation";
 
-import { Role } from "@prisma/client";
-
 import { DoughnutChart } from "@/components/charts/doughnut-chart";
 import { BudgetAdjustForm } from "@/components/projects/budget-adjust-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { auth } from "@/lib/auth";
-import { getProjectById } from "@/lib/services/project-service";
+import { canViewProject, requireSession } from "@/lib/authz";
+import { prisma } from "@/lib/db";
 
 type ProjectBudgetPageProps = {
   params: Promise<{ projectId: string }>;
 };
 
+const CREATE_PROJECT = "CREATE_PROJECT";
+const MANAGE_USERS = "MANAGE_USERS";
+
 export default async function ProjectBudgetPage({ params }: ProjectBudgetPageProps) {
   const { projectId } = await params;
-  const session = await auth();
-  if (!session?.user) {
+  const session = await requireSession();
+
+  const allowed = await canViewProject(session.user.id, projectId);
+  if (!allowed) {
     notFound();
   }
 
-  const project = await getProjectById(projectId);
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: {
+      id: true,
+      status: true,
+      budgetPlanned: true,
+      budgetActual: true,
+    },
+  });
+
   if (!project) {
     notFound();
   }
 
-  const planned = Number(project.budgetPlanned);
-  const actual = Number(project.budgetActual);
+  const planned = project.budgetPlanned ? Number(project.budgetPlanned) : 0;
+  const actual = project.budgetActual ? Number(project.budgetActual) : 0;
   const variance = planned ? ((actual - planned) / planned) * 100 : 0;
+  const canAdjustBudget = session.user.permissions.some((permission) =>
+    [CREATE_PROJECT, MANAGE_USERS].includes(permission),
+  );
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -50,20 +65,26 @@ export default async function ProjectBudgetPage({ params }: ProjectBudgetPagePro
           <div className="w-full space-y-2 text-sm text-muted-foreground">
             <div className="flex items-center justify-between">
               <span>Planned</span>
-              <span className="text-foreground font-semibold">${planned.toLocaleString()}</span>
+              <span className="text-foreground font-semibold">
+                ${planned.toLocaleString()}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span>Actual</span>
-              <span className="text-foreground font-semibold">${actual.toLocaleString()}</span>
+              <span className="text-foreground font-semibold">
+                ${actual.toLocaleString()}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span>Variance</span>
-              <span className={variance >= 0 ? "text-destructive" : "text-chart-teal"}>{variance.toFixed(1)}%</span>
+              <span className={variance >= 0 ? "text-destructive" : "text-chart-teal"}>
+                {variance.toFixed(1)}%
+              </span>
             </div>
           </div>
         </CardContent>
       </Card>
-      {session.user.role !== Role.MEMBER ? (
+      {canAdjustBudget ? (
         <Card>
           <CardHeader>
             <CardTitle>Adjust Financials</CardTitle>

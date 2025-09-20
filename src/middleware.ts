@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { withAuth } from "next-auth/middleware";
 import type { NextRequestWithAuth } from "next-auth/middleware";
 
-import { Role } from "@prisma/client";
-
 const ADMIN_PATHS = ["/admin"];
+const MANAGE_USERS = "MANAGE_USERS";
 
 export default withAuth(
   function middleware(request: NextRequestWithAuth) {
@@ -16,7 +15,8 @@ export default withAuth(
 
     const pathname = request.nextUrl.pathname;
     const isAdminRoute = ADMIN_PATHS.some((path) => pathname.startsWith(path));
-    if (isAdminRoute && token.role !== Role.ADMIN) {
+    const permissions = Array.isArray(token.permissions) ? (token.permissions as string[]) : [];
+    if (isAdminRoute && !permissions.includes(MANAGE_USERS)) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 

@@ -5,9 +5,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { auth } from "@/lib/auth";
 import { getRecentAuditEvents } from "@/lib/services/audit-service";
 
+const MANAGE_USERS = "MANAGE_USERS";
+
 export default async function AuditLogPage() {
   const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !session.user.permissions.includes(MANAGE_USERS)) {
     notFound();
   }
 
@@ -39,7 +41,7 @@ export default async function AuditLogPage() {
                     {event.user?.name ?? "System"}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {event.entity} — {event.entityId}
+                    {event.entity} - {event.entityId}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {event.data ? JSON.stringify(event.data) : event.type}

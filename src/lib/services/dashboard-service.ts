@@ -1,16 +1,18 @@
-﻿import { Role } from "@prisma/client";
-
 import { prisma } from "@/lib/db";
 
-export async function getDashboardMetrics(userId: string, role: Role) {
+const ASSIGN_TASKS = "ASSIGN_TASKS";
+
+export async function getDashboardMetrics(userId: string, permissions: string[]) {
+  const canViewAllTasks = permissions.includes(ASSIGN_TASKS);
+
   const [projects, tasks, assignments] = await Promise.all([
     prisma.project.count(),
     prisma.task.findMany({
-      where: role === Role.MEMBER ? { assigneeId: userId } : {},
+      where: canViewAllTasks ? {} : { assigneeId: userId },
       select: { progress: true, end: true },
     }),
     prisma.assignment.findMany({
-      where: role === Role.MEMBER ? { userId } : {},
+      where: canViewAllTasks ? {} : { userId },
       select: { allocationPct: true },
     }),
   ]);
@@ -62,9 +64,11 @@ export async function getProjectPerformanceSeries() {
   }));
 }
 
-export async function getTaskStatusBreakdown(role: Role, userId: string) {
+export async function getTaskStatusBreakdown(permissions: string[], userId: string) {
+  const canViewAllTasks = permissions.includes(ASSIGN_TASKS);
+
   const tasks = await prisma.task.findMany({
-    where: role === Role.MEMBER ? { assigneeId: userId } : {},
+    where: canViewAllTasks ? {} : { assigneeId: userId },
     select: { progress: true },
   });
 
@@ -79,11 +83,12 @@ export async function getTaskStatusBreakdown(role: Role, userId: string) {
 
   return counts;
 }
-export async function getUpcomingTasks(role: Role, userId: string, take = 6) {
+
+export async function getUpcomingTasks(permissions: string[], userId: string, take = 6) {
+  const canViewAllTasks = permissions.includes(ASSIGN_TASKS);
+
   return prisma.task.findMany({
-    where: {
-      ...(role === Role.MEMBER ? { assigneeId: userId } : {}),
-    },
+    where: canViewAllTasks ? {} : { assigneeId: userId },
     orderBy: { end: "asc" },
     take,
     include: {

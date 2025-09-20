@@ -1,4 +1,4 @@
-﻿import type { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   AlarmClockCheck,
@@ -13,28 +13,29 @@ import {
   Users,
 } from "lucide-react";
 
-import { Role } from "@prisma/client";
-
 export type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
-  roles: Role[];
+  permissions?: string[];
+  requiresAllPermissions?: boolean;
 };
 
 export const primaryNav: NavItem[] = [
-  { label: "Mission Control", href: "/dashboard", icon: Home, roles: [Role.ADMIN, Role.PM, Role.MEMBER] },
-  { label: "Projects", href: "/projects", icon: BriefcaseBusiness, roles: [Role.ADMIN, Role.PM, Role.MEMBER] },
-  { label: "Gantt", href: "/projects/gantt", icon: CalendarClock, roles: [Role.ADMIN, Role.PM] },
-  { label: "Tasks", href: "/projects/tasks", icon: Layers3, roles: [Role.ADMIN, Role.PM, Role.MEMBER] },
-  { label: "Resources", href: "/resources", icon: Users, roles: [Role.ADMIN, Role.PM] },
-  { label: "Budget", href: "/projects/budget", icon: BarChart3, roles: [Role.ADMIN, Role.PM] },
-  { label: "Files", href: "/projects/files", icon: Archive, roles: [Role.ADMIN, Role.PM, Role.MEMBER] },
-  { label: "Comms", href: "/messaging", icon: Inbox, roles: [Role.ADMIN, Role.PM] },
+  { label: "Mission Control", href: "/dashboard", icon: Home },
+  { label: "My Tasks", href: "/tasks", icon: Layers3 },
+  { label: "Projects", href: "/projects", icon: BriefcaseBusiness, permissions: ["VIEW_PROJECT"] },
+  { label: "Gantt", href: "/projects/gantt", icon: CalendarClock, permissions: ["ASSIGN_TASKS"] },
+  { label: "Resources", href: "/resources", icon: Users, permissions: ["ASSIGN_TASKS"] },
+  { label: "Budget", href: "/projects/budget", icon: BarChart3, permissions: ["VIEW_REPORTS"] },
+  { label: "Files", href: "/projects/files", icon: Archive, permissions: ["VIEW_PROJECT"] },
+  { label: "Comms", href: "/messaging", icon: Inbox, permissions: ["ASSIGN_TASKS"] },
 ];
 
 export const secondaryNav: NavItem[] = [
-  { label: "Alerts", href: "/alerts", icon: AlarmClockCheck, roles: [Role.ADMIN, Role.PM] },
-  { label: "Security", href: "/admin/security", icon: ShieldCheck, roles: [Role.ADMIN] },
-  { label: "Activity", href: "/admin/audit", icon: Activity, roles: [Role.ADMIN] },
+  { label: "Alerts", href: "/alerts", icon: AlarmClockCheck, permissions: ["ASSIGN_TASKS"] },
+  { label: "Task Manager", href: "/admin/tasks", icon: Layers3, permissions: ["ASSIGN_TASKS"], requiresAllPermissions: true },
+  { label: "Users", href: "/admin/users", icon: Users, permissions: ["MANAGE_USERS"], requiresAllPermissions: true },
+  { label: "Roles", href: "/admin/roles", icon: ShieldCheck, permissions: ["MANAGE_USERS"], requiresAllPermissions: true },
+  { label: "Activity", href: "/admin/audit", icon: Activity, permissions: ["MANAGE_USERS"], requiresAllPermissions: true },
 ];

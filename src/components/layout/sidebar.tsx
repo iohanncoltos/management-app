@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type NavItem, primaryNav, secondaryNav } from "@/config/navigation";
 import { cn } from "@/lib/utils";
-import { Role } from "@prisma/client";
 import { BadgeCheck, Menu } from "lucide-react";
 import { ReactNode } from "react";
 
@@ -14,7 +13,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 export type SidebarUser = {
   name: string;
   email: string;
-  role: Role;
+  role: string | null;
+  permissions: string[];
 };
 
 interface SidebarProps {
@@ -22,12 +22,25 @@ interface SidebarProps {
   footer?: ReactNode;
 }
 
-function NavigationList({ items, userRole }: { items: NavItem[]; userRole: Role }) {
+function canAccess(item: NavItem, userPermissions: string[]) {
+  if (!item.permissions || item.permissions.length === 0) {
+    return true;
+  }
+
+  const { permissions, requiresAllPermissions } = item;
+  if (requiresAllPermissions) {
+    return permissions.every((permission) => userPermissions.includes(permission));
+  }
+
+  return permissions.some((permission) => userPermissions.includes(permission));
+}
+
+function NavigationList({ items, userPermissions }: { items: NavItem[]; userPermissions: string[] }) {
   const pathname = usePathname();
   return (
     <nav className="flex flex-col gap-1">
       {items
-        .filter((item) => item.roles.includes(userRole))
+        .filter((item) => canAccess(item, userPermissions))
         .map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -64,10 +77,10 @@ function SidebarContent({ user, footer }: { user: SidebarUser; footer?: ReactNod
         <BadgeCheck className="h-5 w-5 text-accent" />
       </div>
       <div className="flex flex-col gap-8">
-        <NavigationList items={primaryNav} userRole={user.role} />
+        <NavigationList items={primaryNav} userPermissions={user.permissions} />
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Admin & Alerts</p>
-          <NavigationList items={secondaryNav} userRole={user.role} />
+          <NavigationList items={secondaryNav} userPermissions={user.permissions} />
         </div>
       </div>
       <div className="mt-auto space-y-4">
@@ -75,7 +88,7 @@ function SidebarContent({ user, footer }: { user: SidebarUser; footer?: ReactNod
           <p className="text-sm font-semibold text-foreground">{user.name}</p>
           <p className="text-xs text-muted-foreground">{user.email}</p>
           <p className="mt-2 inline-flex rounded-xl bg-accent/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
-            {user.role}
+            {user.role ?? "Unassigned"}
           </p>
         </div>
         {footer}

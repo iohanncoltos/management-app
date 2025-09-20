@@ -10,7 +10,7 @@ export const registerSchema = z.object({
   name: z.string().min(2).max(80),
   email: z.string().email(),
   password: z.string().min(12, "Use at least 12 characters"),
-  role: z.enum(["ADMIN", "PM", "MEMBER"]),
+  role: z.string().trim().min(2).max(64).optional(),
 });
 
 export const resetPasswordRequestSchema = z.object({

@@ -1,36 +1,33 @@
 import { notFound } from "next/navigation";
 
-import { Role } from "@prisma/client";
-
 import { TaskCreateForm } from "@/components/projects/task-create-form";
 import { TaskTable } from "@/components/projects/task-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { auth } from "@/lib/auth";
 import { listTasksByProject } from "@/lib/services/task-service";
 import { listAssignableUsers } from "@/lib/services/user-service";
+import { canViewProject, requireSession } from "@/lib/authz";
 
 type ProjectTasksPageProps = {
   params: Promise<{ projectId: string }>;
 };
 
+const ASSIGN_TASKS = "ASSIGN_TASKS";
+
 export default async function ProjectTasksPage({ params }: ProjectTasksPageProps) {
   const { projectId } = await params;
-  const session = await auth();
-  if (!session?.user) {
+  const session = await requireSession();
+
+  const allowed = await canViewProject(session.user.id, projectId);
+  if (!allowed) {
     notFound();
   }
+
+  const canManageTasks = session.user.permissions.includes(ASSIGN_TASKS);
 
   const [tasks, users] = await Promise.all([
     listTasksByProject(projectId),
-    listAssignableUsers(session.user.id, session.user.role),
+    listAssignableUsers(session.user.id, session.user.permissions),
   ]);
-
-  if (
-    session.user.role === Role.MEMBER &&
-    !tasks.some((task) => task.assigneeId === session.user.id)
-  ) {
-    notFound();
-  }
 
   const taskModels = tasks.map((task) => ({
     id: task.id,
@@ -48,10 +45,10 @@ export default async function ProjectTasksPage({ params }: ProjectTasksPageProps
           <CardTitle>Current Workstreams</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <TaskTable tasks={taskModels} canEdit={session.user.role !== Role.MEMBER} />
+          <TaskTable tasks={taskModels} canEdit={canManageTasks} />
         </CardContent>
       </Card>
-      {session.user.role !== Role.MEMBER ? (
+      {canManageTasks ? (
         <Card>
           <CardHeader>
             <CardTitle>Schedule New Work</CardTitle>
@@ -59,7 +56,11 @@ export default async function ProjectTasksPage({ params }: ProjectTasksPageProps
           <CardContent>
             <TaskCreateForm
               projectId={projectId}
-              users={users}
+              users={users.map((user) => ({
+                id: user.id,
+                name: user.name ?? "Unnamed User",
+                email: user.email,
+              }))}
               tasks={taskModels.map((task) => ({ id: task.id, title: task.title }))}
             />
           </CardContent>

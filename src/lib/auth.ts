@@ -1,5 +1,5 @@
-﻿import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { AuditEventType, Role } from "@prisma/client";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { AuditEventType } from "@prisma/client";
 import { argon2id, hash as argon2Hash, verify as argon2Verify } from "argon2";
 import NextAuth, { getServerSession, type NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
@@ -27,6 +27,47 @@ async function verifyPassword(hashValue: string, password: string) {
   return argon2Verify(hashValue, password);
 }
 
+type PrismaUserWithRole = {
+  id: string;
+  email: string;
+  name: string | null;
+  passwordHash: string | null;
+  role: {
+    id: string;
+    name: string;
+    permissions: { action: string }[];
+  } | null;
+};
+
+function toSessionUser(user: PrismaUserWithRole): SessionUser {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role?.name ?? null,
+    permissions: user.role?.permissions.map((permission) => permission.action) ?? [],
+  };
+}
+
+async function getUserWithRoleById(id: string) {
+  const user = await prisma.user.findUnique({
+    where: { id },
+    include: {
+      role: {
+        include: {
+          permissions: true,
+        },
+      },
+    },
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  return toSessionUser(user as PrismaUserWithRole);
+}
+
 export const authConfig: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
@@ -51,7 +92,16 @@ export const authConfig: NextAuthOptions = {
         }
 
         const { email, password } = parsed.data;
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma.user.findUnique({
+          where: { email },
+          include: {
+            role: {
+              include: {
+                permissions: true,
+              },
+            },
+          },
+        });
         if (!user || !user.passwordHash) {
           return null;
         }
@@ -76,32 +126,59 @@ export const authConfig: NextAuthOptions = {
           data: { action: "login" },
         });
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        } satisfies {
-          id: string;
-          email: string;
-          name: string;
-          role: Role;
-        };
+        return toSessionUser(user as PrismaUserWithRole);
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
-        token.role = (user as { role?: Role }).role ?? Role.MEMBER;
+        const sessionUser = user as SessionUser;
+        token.role = sessionUser.role;
+        token.permissions = sessionUser.permissions;
+        token.roleRefreshedAt = Date.now();
       }
+
+      const shouldRefresh =
+        trigger === "update" ||
+        !token.role ||
+        !Array.isArray(token.permissions) ||
+        typeof token.roleRefreshedAt !== "number" ||
+        token.roleRefreshedAt < Date.now() - 5 * 60 * 1000;
+
+      if (shouldRefresh && token.sub) {
+        const refreshed = await getUserWithRoleById(token.sub);
+        token.role = refreshed?.role ?? null;
+        token.permissions = refreshed?.permissions ?? [];
+        token.roleRefreshedAt = Date.now();
+        token.name = refreshed?.name ?? token.name ?? null;
+        token.email = refreshed?.email ?? token.email ?? null;
+      }
+
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.sub ?? "";
-        session.user.role = (token.role as Role) ?? Role.MEMBER;
+      if (!session.user) {
+        return session;
       }
+
+      session.user.id = token.sub ?? "";
+      session.user.email = (token.email as string | null) ?? session.user.email ?? "";
+      session.user.name = (token.name as string | null) ?? session.user.name ?? null;
+      session.user.role = (token.role as string | null) ?? null;
+      session.user.permissions = Array.isArray(token.permissions)
+        ? (token.permissions as string[])
+        : [];
+
+      if (session.user.permissions.length === 0 && session.user.id) {
+        const refreshed = await getUserWithRoleById(session.user.id);
+        if (refreshed) {
+          session.user.name = refreshed.name;
+          session.user.role = refreshed.role;
+          session.user.permissions = refreshed.permissions;
+        }
+      }
+
       return session;
     },
   },
@@ -128,6 +205,7 @@ export const auth = () => getServerSession(authConfig);
 export type SessionUser = {
   id: string;
   email: string;
-  name: string;
-  role: Role;
+  name: string | null;
+  role: string | null;
+  permissions: string[];
 };

@@ -1,20 +1,24 @@
 import { notFound } from "next/navigation";
 
 import { OnlyOfficeViewer } from "@/components/projects/onlyoffice-viewer";
-import { auth } from "@/lib/auth";
+import { canViewProject, requireSession } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 import { buildOnlyOfficeConfig } from "@/lib/onlyoffice";
 import { getR2SignedUrl } from "@/lib/r2";
-import { Role } from "@prisma/client";
 
 type FileEditorPageProps = {
   params: Promise<{ projectId: string; fileId: string }>;
 };
 
+const ASSIGN_TASKS = "ASSIGN_TASKS";
+const VIEW_PROJECT = "VIEW_PROJECT";
+
 export default async function FileEditorPage({ params }: FileEditorPageProps) {
   const { projectId, fileId } = await params;
-  const session = await auth();
-  if (!session?.user) {
+  const session = await requireSession();
+
+  const allowed = await canViewProject(session.user.id, projectId);
+  if (!allowed) {
     notFound();
   }
 
@@ -34,11 +38,14 @@ export default async function FileEditorPage({ params }: FileEditorPageProps) {
     notFound();
   }
 
-  if (
-    session.user.role === Role.MEMBER &&
-    file.createdById !== session.user.id &&
-    !file.project.tasks.some((task) => task.assigneeId === session.user.id)
-  ) {
+  const canEdit = session.user.permissions.includes(ASSIGN_TASKS);
+  const canAccess =
+    canEdit ||
+    session.user.permissions.includes(VIEW_PROJECT) ||
+    file.createdById === session.user.id ||
+    file.project.tasks.some((task) => task.assigneeId === session.user.id);
+
+  if (!canAccess) {
     notFound();
   }
 
@@ -51,7 +58,7 @@ export default async function FileEditorPage({ params }: FileEditorPageProps) {
       id: session.user.id,
       name: session.user.name ?? session.user.email ?? "User",
     },
-    permissions: { edit: session.user.role !== Role.MEMBER },
+    permissions: { edit: canEdit },
   });
 
   return (

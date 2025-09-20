@@ -8,9 +8,9 @@ import { Progress } from "@/components/ui/progress";
 
 interface AllocationItem {
   id: string;
-  name: string;
+  name: string | null;
   email: string;
-  role: string;
+  role: { name: string; id: string; description: string | null; isSystem: boolean; } | null;
   totalAllocation: number;
   assignments: Array<{
     allocationPct: number;
@@ -35,8 +35,8 @@ export function ResourceGrid({ allocations }: ResourceGridProps) {
           <Card key={resource.id} className="shadow-card border-border/60">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-lg text-foreground">{resource.name}</CardTitle>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{resource.role}</p>
+                <CardTitle className="text-lg text-foreground">{resource.name ?? "Unnamed User"}</CardTitle>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{resource.role?.name ?? "No Role"}</p>
               </div>
               {overAllocated ? <TriangleAlert className="h-5 w-5 text-destructive" /> : null}
             </CardHeader>

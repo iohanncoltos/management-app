@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   });
 
   for (const task of upcoming) {
-    if (!task.assignee?.email) continue;
+    if (!task.assignee?.email || !task.project) continue;
 
     await sendProjectMail({
       projectCode: task.project.code,

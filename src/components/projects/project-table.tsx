@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { format } from "date-fns";
@@ -16,7 +16,7 @@ interface ProjectItem {
   name: string;
   code: string;
   status: string;
-  startDate: string | Date;
+  startDate: string | Date | null;
   endDate: string | Date | null;
   budgetPlanned: number;
   budgetActual: number;
@@ -58,7 +58,7 @@ export function ProjectTable({ projects }: ProjectTableProps) {
             {projects.map((project) => {
               const status = statusVariants[project.status] ?? statusVariants.PLANNING;
               const endDate = project.endDate ? (typeof project.endDate === "string" ? new Date(project.endDate) : project.endDate) : null;
-              const startDate = typeof project.startDate === "string" ? new Date(project.startDate) : project.startDate;
+              const startDate = project.startDate ? (typeof project.startDate === "string" ? new Date(project.startDate) : project.startDate) : null;
               const progress = project.tasksTotal ? Math.round((project.tasksComplete / project.tasksTotal) * 100) : 0;
               const variance = project.budgetPlanned
                 ? ((Number(project.budgetActual) - Number(project.budgetPlanned)) / Number(project.budgetPlanned)) * 100
@@ -76,7 +76,7 @@ export function ProjectTable({ projects }: ProjectTableProps) {
                     <Badge variant={status.variant}>{status.label}</Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    <div>{format(startDate, "dd MMM yyyy")}</div>
+                    <div>{startDate ? format(startDate, "dd MMM yyyy") : "TBD"}</div>
                     {endDate ? <div>â†’ {format(endDate, "dd MMM yyyy")}</div> : <div>â†’ TBD</div>}
                   </TableCell>
                   <TableCell className="w-48">

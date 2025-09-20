@@ -40,7 +40,7 @@ export async function getResourceAllocations() {
           allocationPct: assignment.allocationPct,
           taskId: assignment.task.id,
           taskTitle: assignment.task.title,
-          projectCode: assignment.task.project.code,
+          projectCode: assignment.task.project?.code || "NO-PROJECT",
           start: assignment.task.start,
           end: assignment.task.end,
         }))
@@ -48,7 +48,7 @@ export async function getResourceAllocations() {
           allocationPct: 100,
           taskId: task.id,
           taskTitle: task.title,
-          projectCode: task.project.code,
+          projectCode: task.project?.code || "NO-PROJECT",
           start: task.start,
           end: task.end,
         }));

@@ -16,9 +16,10 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const format = searchParams.get("format") ?? "csv";
+  const permissions = session.user.permissions ?? [];
 
   const [metrics, performance] = await Promise.all([
-    getDashboardMetrics(session.user.id, session.user.role),
+    getDashboardMetrics(session.user.id, permissions),
     getProjectPerformanceSeries(),
   ]);
 
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
     doc.moveDown();
     doc.text("Project Performance:");
     performance.forEach((item) => {
-      doc.text(`â€˘ ${item.label}: Planned $${item.planned.toLocaleString()} / Actual $${item.actual.toLocaleString()} / Completion ${item.completion}%`);
+      doc.text(`- ${item.label}: Planned $${item.planned.toLocaleString()} / Actual $${item.actual.toLocaleString()} / Completion ${item.completion}%`);
     });
     doc.end();
 

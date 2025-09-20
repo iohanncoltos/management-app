@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { PageHeader } from "@/components/layout/page-header";
@@ -11,18 +11,24 @@ import {
   getUpcomingTasks,
 } from "@/lib/services/dashboard-service";
 
+const CREATE_PROJECT = "CREATE_PROJECT";
+
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) {
     return null;
   }
 
+  const permissions = session.user.permissions ?? [];
+
   const [metrics, performance, breakdown, upcoming] = await Promise.all([
-    getDashboardMetrics(session.user.id, session.user.role),
+    getDashboardMetrics(session.user.id, permissions),
     getProjectPerformanceSeries(),
-    getTaskStatusBreakdown(session.user.role, session.user.id),
-    getUpcomingTasks(session.user.role, session.user.id),
+    getTaskStatusBreakdown(permissions, session.user.id),
+    getUpcomingTasks(permissions, session.user.id),
   ]);
+
+  const canCreateProjects = permissions.includes(CREATE_PROJECT);
 
   return (
     <div className="space-y-6">
@@ -40,9 +46,11 @@ export default async function DashboardPage() {
             <Button asChild variant="outline">
               <Link href="/projects">Project Register</Link>
             </Button>
-            <Button asChild>
-              <Link href="/projects/new">New Mission</Link>
-            </Button>
+            {canCreateProjects ? (
+              <Button asChild>
+                <Link href="/projects/new">New Mission</Link>
+              </Button>
+            ) : null}
           </div>
         }
       />

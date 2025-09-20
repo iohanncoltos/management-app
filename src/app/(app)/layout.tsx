@@ -19,6 +19,7 @@ export default async function AppLayout({ children }: AppLayoutProps) {
     name: session.user.name ?? "Operator",
     email: session.user.email ?? "",
     role: session.user.role,
+    permissions: session.user.permissions ?? [],
   } as const;
 
   return <AppShell user={user}>{children}</AppShell>;

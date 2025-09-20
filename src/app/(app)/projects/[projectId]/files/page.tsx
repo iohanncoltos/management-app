@@ -4,21 +4,46 @@ import { notFound } from "next/navigation";
 import { FileUpload } from "@/components/projects/file-upload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { auth } from "@/lib/auth";
-import { listFilesForProject } from "@/lib/services/file-service";
+import { canViewProject, requireSession } from "@/lib/authz";
+import { prisma } from "@/lib/db";
+
+const fileSelector = {
+  id: true,
+  name: true,
+  mime: true,
+  size: true,
+  version: true,
+  createdAt: true,
+  createdBy: {
+    select: { id: true, name: true },
+  },
+};
 
 type ProjectFilesPageProps = {
   params: Promise<{ projectId: string }>;
 };
 
+const ASSIGN_TASKS = "ASSIGN_TASKS";
+const VIEW_PROJECT = "VIEW_PROJECT";
+
 export default async function ProjectFilesPage({ params }: ProjectFilesPageProps) {
   const { projectId } = await params;
-  const session = await auth();
-  if (!session?.user) {
+  const session = await requireSession();
+
+  const allowed = await canViewProject(session.user.id, projectId);
+  if (!allowed) {
     notFound();
   }
 
-  const files = await listFilesForProject(projectId);
+  const files = await prisma.file.findMany({
+    where: { projectId },
+    select: fileSelector,
+    orderBy: { createdAt: "desc" },
+  });
+
+  const permissions = session.user.permissions ?? [];
+  const canUpload = permissions.includes(ASSIGN_TASKS);
+  const canDownload = permissions.includes(VIEW_PROJECT) || canUpload;
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -53,9 +78,11 @@ export default async function ProjectFilesPage({ params }: ProjectFilesPageProps
                     <Link href={`/projects/${projectId}/files/${file.id}`} className="text-accent hover:text-primary">
                       Open
                     </Link>
-                    <Link href={`/api/files/${file.id}/download`} className="text-muted-foreground hover:text-primary">
-                      Download
-                    </Link>
+                    {canDownload ? (
+                      <Link href={`/api/files/${file.id}/download`} className="text-muted-foreground hover:text-primary">
+                        Download
+                      </Link>
+                    ) : null}
                   </TableCell>
                 </TableRow>
               ))}
@@ -75,7 +102,11 @@ export default async function ProjectFilesPage({ params }: ProjectFilesPageProps
           <CardTitle>Upload Artifact</CardTitle>
         </CardHeader>
         <CardContent>
-          <FileUpload projectId={projectId} />
+          {canUpload ? (
+            <FileUpload projectId={projectId} />
+          ) : (
+            <p className="text-sm text-muted-foreground">You do not have upload permissions on this project.</p>
+          )}
         </CardContent>
       </Card>
     </div>
