@@ -9,7 +9,7 @@ import { auth } from "@/lib/auth";
 const API_BASE =
   process.env.APP_BASE_URL ??
   process.env.NEXTAUTH_URL ??
-  "http://localhost:3000";
+  (process.env.NODE_ENV === 'development' ? "http://localhost:3000" : "");
 
 async function serializeCookieHeader() {
   const store = await cookies();
@@ -35,18 +35,30 @@ export default async function ProjectsPage() {
     return null;
   }
 
-  const response = await fetch(`${API_BASE}/api/projects`, {
-    headers: {
-      cookie: await serializeCookieHeader(),
-    },
-    cache: "no-store",
-  });
+  let projects: ApiProject[] = [];
 
-  if (!response.ok) {
-    throw new Error("Failed to load projects");
+  try {
+    // Use relative URL in server-side rendering to avoid port issues
+    const apiUrl = API_BASE ? `${API_BASE}/api/projects` : '/api/projects';
+    const response = await fetch(apiUrl, {
+      headers: {
+        cookie: await serializeCookieHeader(),
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error("Failed to load projects:", response.status, response.statusText);
+      const errorText = await response.text();
+      console.error("Response body:", errorText);
+      projects = [];
+    } else {
+      projects = (await response.json()) as ApiProject[];
+    }
+  } catch (error) {
+    console.error("Error fetching projects:", error);
+    projects = [];
   }
-
-  const projects = (await response.json()) as ApiProject[];
 
   const normalized = projects.map((project) => ({
     id: project.id,
@@ -63,7 +75,7 @@ export default async function ProjectsPage() {
     filesCount: 0,
   }));
 
-  const canCreateProjects = session.user.permissions.includes(CREATE_PROJECT);
+  const canCreateProjects = session.user.permissions?.includes(CREATE_PROJECT) ?? false;
 
   return (
     <div className="space-y-6">
