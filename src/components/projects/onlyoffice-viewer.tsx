@@ -51,5 +51,5 @@ export function OnlyOfficeViewer({ baseUrl, config, token }: OnlyOfficeViewerPro
     };
   }, [baseUrl, config, token]);
 
-  return <div id="onlyoffice-editor" ref={containerRef} className="h-[80vh] w-full rounded-3xl border border-border/60" />;
+  return <div id="onlyoffice-editor" ref={containerRef} className="h-full w-full" />;
 }

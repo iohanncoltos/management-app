@@ -136,7 +136,7 @@ export function EnhancedTaskForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Assign To</FormLabel>
-                    <Select value={field.value ?? undefined} onValueChange={field.onChange}>
+                    <Select value={field.value ?? ""} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select operator" />
@@ -256,7 +256,7 @@ export function EnhancedTaskForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Project (Optional)</FormLabel>
-                    <Select value={field.value ?? undefined} onValueChange={field.onChange}>
+                    <Select value={field.value ?? ""} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select project" />

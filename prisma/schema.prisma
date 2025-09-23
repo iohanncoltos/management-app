@@ -22,6 +22,15 @@ enum AuditEventType {
   FILE
   USER
   SYSTEM
+  BUDGET
+}
+
+enum BudgetCategory {
+  MECHANICAL
+  ELECTRICAL
+  SYSTEMS
+  SOFTWARE
+  OTHER
 }
 
 enum TaskPriority {
@@ -86,6 +95,10 @@ model User {
   passkeys             Passkey[]
   accounts             Account[]
   passwordResetTokens  PasswordResetToken[]
+  budgetSheets         BudgetSheet[]   @relation("BudgetSheetCreatedBy")
+  approvedBudgetSheets BudgetSheet[]   @relation("BudgetSheetApprovedBy")
+  budgetLines          BudgetLine[]
+  budgetVersions       BudgetVersion[]
 }
 
 model Project {
@@ -104,6 +117,7 @@ model Project {
   memberships   ProjectMember[]
   tasks         Task[]
   files         File[]
+  budgetSheets  BudgetSheet[]
 }
 
 model ProjectMember {
@@ -244,4 +258,56 @@ model PasswordResetToken {
   token     String   @unique
   expires   DateTime
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BudgetSheet {
+  id           String        @id @default(cuid())
+  projectId    String
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  currency     String        @default("EUR") // default currency for summary
+  vatDefault   Decimal?      @db.Decimal(5,2)
+  createdById  String
+  createdBy    User          @relation("BudgetSheetCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  lines        BudgetLine[]
+  versions     BudgetVersion[]
+  approvedAt   DateTime?
+  approvedById String?
+  approvedBy   User?         @relation("BudgetSheetApprovedBy", fields: [approvedById], references: [id])
+
+  @@unique([projectId])
+}
+
+model BudgetLine {
+  id           String          @id @default(cuid())
+  sheetId      String
+  sheet        BudgetSheet     @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  name         String
+  category     BudgetCategory
+  quantity     Decimal         @db.Decimal(18,3)
+  unit         String?
+  unitPrice    Decimal         @db.Decimal(18,4)
+  currency     String          @default("EUR")
+  vatPercent   Decimal?        @db.Decimal(5,2)
+  supplier     String?
+  link         String?
+  notes        String?
+  createdById  String
+  createdBy    User            @relation(fields: [createdById], references: [id])
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([sheetId, category])
+}
+
+model BudgetVersion {
+  id           String      @id @default(cuid())
+  sheetId      String
+  sheet        BudgetSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  label        String      // e.g., "v1", "Kickoff", "Pre-PO"
+  createdById  String
+  createdBy    User        @relation(fields: [createdById], references: [id])
+  createdAt    DateTime    @default(now())
+  snapshotJson Json        // store snapshot for fast restore/compare
 }

@@ -75,3 +75,54 @@ export async function canViewProject(userId: string, projectId: string) {
 
   return Boolean(membership);
 }
+
+export async function requireProjectView(projectId: string) {
+  const session = await requireSession();
+
+  const canView = await canViewProject(session.user.id, projectId);
+  if (!canView) {
+    throw new AuthorizationError("Forbidden - insufficient project permissions", 403);
+  }
+
+  return session;
+}
+
+export async function requireProjectBudgetEdit(projectId: string) {
+  const session = await requireSession();
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      role: {
+        select: {
+          name: true,
+          permissions: { select: { action: true } },
+        },
+      },
+    },
+  });
+
+  if (!user) {
+    throw new AuthorizationError("User not found", 404);
+  }
+
+  const roleName = user.role?.name ?? null;
+  const permissions = user.role?.permissions.map((permission) => permission.action) ?? [];
+
+  // Admin or users with MANAGE_USERS permission can edit budgets
+  if (isAdminRole(roleName) || permissions.includes("MANAGE_USERS")) {
+    return session;
+  }
+
+  // Project managers can edit budgets
+  if (roleName === "PROJECT_MANAGER") {
+    // Verify they have access to this project
+    const canView = await canViewProject(session.user.id, projectId);
+    if (!canView) {
+      throw new AuthorizationError("Forbidden - insufficient project permissions", 403);
+    }
+    return session;
+  }
+
+  throw new AuthorizationError("Forbidden - budget edit requires Admin or Project Manager role", 403);
+}

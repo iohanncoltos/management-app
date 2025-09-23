@@ -75,7 +75,7 @@ export default async function ProjectFilesPage({ params }: ProjectFilesPageProps
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{file.createdBy?.name}</TableCell>
                   <TableCell className="text-right text-sm space-x-3">
-                    <Link href={`/projects/${projectId}/files/${file.id}`} className="text-accent hover:text-primary">
+                    <Link href={`/editor/projects/${projectId}/files/${file.id}`} className="text-accent hover:text-primary">
                       Open
                     </Link>
                     {canDownload ? (

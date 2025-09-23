@@ -8,7 +8,12 @@
       "Bash(npx prisma db push:*)",
       "Bash(npx prisma generate:*)",
       "Bash(node:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(curl:*)",
+      "Bash(npm install:*)",
+      "Bash(tasklist)",
+      "Bash(npx kill-port:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

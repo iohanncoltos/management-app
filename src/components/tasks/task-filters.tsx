@@ -206,7 +206,7 @@ export function TaskFilters({
             <div className="space-y-2">
               <Label>Assignee</Label>
               <Select
-                value={filters.assigneeId || undefined}
+                value={filters.assigneeId || ""}
                 onValueChange={(value) => updateFilters({ assigneeId: value || undefined })}
               >
                 <SelectTrigger>
@@ -227,7 +227,7 @@ export function TaskFilters({
             <div className="space-y-2">
               <Label>Project</Label>
               <Select
-                value={filters.projectId || undefined}
+                value={filters.projectId || ""}
                 onValueChange={(value) => updateFilters({ projectId: value === "none" ? "none" : value || undefined })}
               >
                 <SelectTrigger>

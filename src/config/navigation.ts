@@ -27,7 +27,7 @@ export const primaryNav: NavItem[] = [
   { label: "Projects", href: "/projects", icon: BriefcaseBusiness, permissions: ["VIEW_PROJECT"] },
   { label: "Gantt", href: "/projects/gantt", icon: CalendarClock, permissions: ["ASSIGN_TASKS"] },
   { label: "Resources", href: "/resources", icon: Users, permissions: ["ASSIGN_TASKS"] },
-  { label: "Budget", href: "/projects/budget", icon: BarChart3, permissions: ["VIEW_REPORTS"] },
+  { label: "Budget", href: "/budget", icon: BarChart3, permissions: ["VIEW_PROJECT"] },
   { label: "Files", href: "/projects/files", icon: Archive, permissions: ["VIEW_PROJECT"] },
   { label: "Comms", href: "/messaging", icon: Inbox, permissions: ["ASSIGN_TASKS"] },
 ];

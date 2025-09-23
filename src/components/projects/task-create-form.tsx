@@ -62,7 +62,7 @@ export function TaskCreateForm({ projectId, users, tasks, onCreated }: TaskCreat
       priority: TaskPriority.MEDIUM,
       category: TaskCategory.PROJECT_WORK,
       status: TaskStatus.NOT_STARTED,
-      assigneeId: undefined,
+      assigneeId: "",
       dependsOn: [],
     },
   });
@@ -121,7 +121,7 @@ export function TaskCreateForm({ projectId, users, tasks, onCreated }: TaskCreat
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Assign to</FormLabel>
-                <Select value={field.value ?? undefined} onValueChange={field.onChange}>
+                <Select value={field.value ?? ""} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select operator" />
