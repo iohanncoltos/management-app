@@ -1,33 +1,49 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
+import type { Prisma } from "@prisma/client";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { ProjectTable } from "@/components/projects/project-table";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
-
-const API_BASE =
-  process.env.APP_BASE_URL ??
-  process.env.NEXTAUTH_URL ??
-  (process.env.NODE_ENV === 'development' ? "http://localhost:3000" : "");
-
-async function serializeCookieHeader() {
-  const store = await cookies();
-  return store.getAll().map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
-}
-
-type ApiProject = {
-  id: string;
-  code: string;
-  name: string;
-  status: string;
-  startDate: string | null;
-  endDate: string | null;
-  budgetPlanned: number | null;
-  budgetActual: number | null;
-};
+import { prisma } from "@/lib/db";
 
 const CREATE_PROJECT = "CREATE_PROJECT";
+const MANAGE_USERS = "MANAGE_USERS";
+
+const projectInclude = {
+  memberships: {
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: { select: { id: true, name: true } },
+        },
+      },
+    },
+  },
+  createdBy: {
+    select: { id: true, name: true, email: true },
+  },
+} satisfies Prisma.ProjectFindManyArgs["include"];
+
+type ProjectWithMemberships = Prisma.ProjectGetPayload<{ include: typeof projectInclude }>;
+
+function serializeProject(project: ProjectWithMemberships) {
+  return {
+    id: project.id,
+    code: project.code,
+    name: project.name,
+    status: project.status,
+    startDate: project.startDate?.toISOString() ?? null,
+    endDate: project.endDate?.toISOString() ?? null,
+    budgetPlanned: project.budgetPlanned ? Number(project.budgetPlanned) : null,
+    budgetActual: project.budgetActual ? Number(project.budgetActual) : null,
+    createdAt: project.createdAt.toISOString(),
+    createdById: project.createdById,
+  };
+}
 
 export default async function ProjectsPage() {
   const session = await auth();
@@ -35,26 +51,20 @@ export default async function ProjectsPage() {
     return null;
   }
 
-  let projects: ApiProject[] = [];
+  let projects: ReturnType<typeof serializeProject>[] = [];
 
   try {
-    // Use relative URL in server-side rendering to avoid port issues
-    const apiUrl = API_BASE ? `${API_BASE}/api/projects` : '/api/projects';
-    const response = await fetch(apiUrl, {
-      headers: {
-        cookie: await serializeCookieHeader(),
-      },
-      cache: "no-store",
+    const canViewAll = session.user.permissions?.some((permission) =>
+      [CREATE_PROJECT, MANAGE_USERS].includes(permission),
+    ) ?? false;
+
+    const projectsData = await prisma.project.findMany({
+      where: canViewAll ? undefined : { memberships: { some: { userId: session.user.id } } },
+      orderBy: { createdAt: "desc" },
+      include: projectInclude,
     });
 
-    if (!response.ok) {
-      console.error("Failed to load projects:", response.status, response.statusText);
-      const errorText = await response.text();
-      console.error("Response body:", errorText);
-      projects = [];
-    } else {
-      projects = (await response.json()) as ApiProject[];
-    }
+    projects = projectsData.map(serializeProject);
   } catch (error) {
     console.error("Error fetching projects:", error);
     projects = [];

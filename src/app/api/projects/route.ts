@@ -97,7 +97,9 @@ export async function GET() {
   } catch (error) {
     const handled = handleAuthError(error);
     if (handled) return handled;
-    throw error;
+
+    console.error("Error fetching projects:", error);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -143,6 +145,8 @@ export async function POST(request: Request) {
   } catch (error) {
     const handled = handleAuthError(error);
     if (handled) return handled;
-    throw error;
+
+    console.error("Error creating project:", error);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
