@@ -284,7 +284,7 @@ model BudgetLine {
   sheetId      String
   sheet        BudgetSheet     @relation(fields: [sheetId], references: [id], onDelete: Cascade)
   name         String
-  category     BudgetCategory
+  category     String
   quantity     Decimal         @db.Decimal(18,3)
   unit         String?
   unitPrice    Decimal         @db.Decimal(18,4)

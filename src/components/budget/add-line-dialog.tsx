@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import {
   Dialog,
@@ -34,9 +34,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { BUDGET_CATEGORY_OPTIONS } from "@/lib/budgetCategorizer";
-import { BudgetCategory } from "@prisma/client";
-
 const addLineSchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
   quantity: z.number().positive("Quantity must be positive"),
@@ -47,15 +44,25 @@ const addLineSchema = z.object({
   supplier: z.string().max(100).optional(),
   link: z.string().url("Invalid URL").optional().or(z.literal("")),
   notes: z.string().max(500).optional(),
-  category: z.nativeEnum(BudgetCategory).optional(),
+  category: z.string().min(1, "Category is required").max(100),
+  customCategory: z.string().max(100).optional(),
 });
 
 type AddLineFormData = z.infer<typeof addLineSchema>;
 
+const PREDEFINED_CATEGORIES = [
+  { value: "MECHANICAL", label: "Mechanical" },
+  { value: "ELECTRICAL", label: "Electrical" },
+  { value: "SYSTEMS", label: "Systems" },
+  { value: "SOFTWARE", label: "Software" },
+  { value: "OTHER", label: "Other" },
+  { value: "CUSTOM", label: "Custom..." }
+];
+
 interface BudgetLine {
   id: string;
   name: string;
-  category: BudgetCategory;
+  category: string;
   quantity: number;
   unit: string | null;
   unitPrice: number;
@@ -79,7 +86,7 @@ interface AddLineDialogProps {
 
 export function AddLineDialog({ isOpen, onClose, projectId, onLineAdded }: AddLineDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [useAutoCategory, setUseAutoCategory] = useState(true);
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
 
   const form = useForm<AddLineFormData>({
     resolver: zodResolver(addLineSchema),
@@ -93,17 +100,19 @@ export function AddLineDialog({ isOpen, onClose, projectId, onLineAdded }: AddLi
       supplier: "",
       link: "",
       notes: "",
+      category: "",
+      customCategory: "",
     },
   });
 
   const onSubmit = async (data: AddLineFormData) => {
     setIsSubmitting(true);
     try {
+      const finalCategory = data.category === "CUSTOM" ? data.customCategory : data.category;
       const payload = {
         ...data,
         projectId,
-        // Don't send category if auto-categorization is enabled
-        category: useAutoCategory ? undefined : data.category,
+        category: finalCategory,
         // Clean up empty strings
         unit: data.unit || undefined,
         supplier: data.supplier || undefined,
@@ -111,6 +120,7 @@ export function AddLineDialog({ isOpen, onClose, projectId, onLineAdded }: AddLi
         notes: data.notes || undefined,
         currency: data.currency || "EUR",
       };
+      delete payload.customCategory;
 
       const response = await fetch("/api/budgets/lines", {
         method: "POST",
@@ -141,8 +151,16 @@ export function AddLineDialog({ isOpen, onClose, projectId, onLineAdded }: AddLi
   const handleClose = () => {
     if (!isSubmitting) {
       form.reset();
-      setUseAutoCategory(true);
+      setShowCustomCategory(false);
       onClose();
+    }
+  };
+
+  const handleCategoryChange = (value: string) => {
+    form.setValue("category", value);
+    setShowCustomCategory(value === "CUSTOM");
+    if (value !== "CUSTOM") {
+      form.setValue("customCategory", "");
     }
   };
 
@@ -152,7 +170,7 @@ export function AddLineDialog({ isOpen, onClose, projectId, onLineAdded }: AddLi
         <DialogHeader>
           <DialogTitle>Add Budget Line Item</DialogTitle>
           <DialogDescription>
-            Add a new line item to your project budget. Categories will be automatically assigned based on the item name and details.
+            Add a new line item to your project budget. Enter a custom category name to organize your budget items.
           </DialogDescription>
         </DialogHeader>
 
@@ -308,50 +326,47 @@ export function AddLineDialog({ isOpen, onClose, projectId, onLineAdded }: AddLi
               </div>
 
               <div className="col-span-2">
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Category</Label>
-                  <Button
-                    type="button"
-                    variant={useAutoCategory ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setUseAutoCategory(!useAutoCategory)}
-                    className="text-xs h-6"
-                  >
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Auto-categorize
-                  </Button>
-                </div>
-
-                {!useAutoCategory && (
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category *</FormLabel>
+                      <FormControl>
+                        <Select value={field.value} onValueChange={handleCategoryChange}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PREDEFINED_CATEGORIES.map((category) => (
+                              <SelectItem key={category.value} value={category.value}>
+                                {category.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {showCustomCategory && (
                   <FormField
                     control={form.control}
-                    name="category"
+                    name="customCategory"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="mt-2">
+                        <FormLabel>Custom Category Name *</FormLabel>
                         <FormControl>
-                          <Select value={field.value} onValueChange={field.onChange}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select category..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {BUDGET_CATEGORY_OPTIONS.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Input
+                            placeholder="e.g., Electronics, Tooling, Services..."
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                )}
-
-                {useAutoCategory && (
-                  <div className="text-sm text-muted-foreground bg-muted/50 rounded-md p-2 border border-dashed">
-                    Category will be automatically determined based on the item name and unit
-                  </div>
                 )}
               </div>
 

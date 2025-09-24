@@ -12,7 +12,6 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BudgetCategory } from "@prisma/client";
 
 interface Project {
   id: string;
@@ -24,7 +23,7 @@ interface Project {
 interface BudgetLine {
   id: string;
   name: string;
-  category: BudgetCategory;
+  category: string;
   quantity: number;
   unit: string | null;
   unitPrice: number;
@@ -41,7 +40,7 @@ interface BudgetLine {
 
 interface BudgetTotals {
   total: number;
-  totalsByCategory: Record<BudgetCategory, number>;
+  totalsByCategory: Record<string, number>;
   linesCount: number;
 }
 
@@ -54,19 +53,13 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
   const [lines, setLines] = useState<BudgetLine[]>([]);
   const [totals, setTotals] = useState<BudgetTotals>({
     total: 0,
-    totalsByCategory: {
-      [BudgetCategory.MECHANICAL]: 0,
-      [BudgetCategory.ELECTRICAL]: 0,
-      [BudgetCategory.SYSTEMS]: 0,
-      [BudgetCategory.SOFTWARE]: 0,
-      [BudgetCategory.OTHER]: 0,
-    },
+    totalsByCategory: {},
     linesCount: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [filters, setFilters] = useState({
-    category: null as BudgetCategory | null,
+    category: null as string | null,
     search: "",
     supplier: "",
   });
@@ -173,7 +166,7 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
 
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Main Budget Table */}
-        <div className="lg:col-span-8 space-y-6">
+        <div className="lg:col-span-9 space-y-6">
           <BudgetToolbar
             canEdit={canEdit}
             projectId={project.id}
@@ -199,7 +192,7 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
         </div>
 
         {/* Sidebar with Charts and Totals */}
-        <div className="lg:col-span-4 space-y-6">
+        <div className="lg:col-span-3 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Budget Summary</CardTitle>

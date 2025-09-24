@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { BudgetCategory } from "@prisma/client";
 import { z } from "zod";
 
 import { recordAuditEvent } from "@/lib/audit";
 import { AuthorizationError, requireProjectView, requireProjectBudgetEdit } from "@/lib/authz";
-import { categorizeBudgetItem } from "@/lib/budgetCategorizer";
 import { prisma } from "@/lib/db";
 
 const createLineSchema = z.object({
@@ -18,7 +16,7 @@ const createLineSchema = z.object({
   supplier: z.string().max(100).optional(),
   link: z.string().url().optional(),
   notes: z.string().max(500).optional(),
-  category: z.nativeEnum(BudgetCategory).optional(),
+  category: z.string().min(1).max(100),
 });
 
 function handleAuthError(error: unknown) {
@@ -32,7 +30,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get("projectId");
-    const category = searchParams.get("category") as BudgetCategory | null;
+    const category = searchParams.get("category");
     const search = searchParams.get("search");
     const supplier = searchParams.get("supplier");
     const page = parseInt(searchParams.get("page") || "1");
@@ -141,7 +139,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { projectId, category, ...data } = parsed.data;
+    const { projectId, ...data } = parsed.data;
 
     // Verify project permissions
     await requireProjectBudgetEdit(projectId);
@@ -160,18 +158,9 @@ export async function POST(request: Request) {
       });
     }
 
-    // Auto-categorize if category not provided
-    const finalCategory = category || categorizeBudgetItem(
-      data.name,
-      data.unit,
-      data.supplier,
-      data.notes
-    );
-
     const line = await prisma.budgetLine.create({
       data: {
         ...data,
-        category: finalCategory,
         sheetId: sheet.id,
         createdById: session.user.id,
       },

@@ -25,13 +25,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { EditLineDialog } from "./edit-line-dialog";
-import { BUDGET_CATEGORY_LABELS, BUDGET_CATEGORY_COLORS } from "@/lib/budgetCategorizer";
-import { BudgetCategory } from "@prisma/client";
 
 interface BudgetLine {
   id: string;
   name: string;
-  category: BudgetCategory;
+  category: string;
   quantity: number;
   unit: string | null;
   unitPrice: number;
@@ -53,6 +51,17 @@ interface BudgetTableProps {
   onLineUpdate: (line: BudgetLine) => void;
   onLineDelete: (lineId: string) => void;
 }
+
+const getCategoryColor = (category: string): string => {
+  const colors: Record<string, string> = {
+    MECHANICAL: "#0ea5e9",
+    ELECTRICAL: "#f59e0b",
+    SYSTEMS: "#10b981",
+    SOFTWARE: "#8b5cf6",
+    OTHER: "#6b7280",
+  };
+  return colors[category] || "#6b7280";
+};
 
 export function BudgetTable({ lines, isLoading, canEdit, onLineUpdate, onLineDelete }: BudgetTableProps) {
   const [editingLine, setEditingLine] = useState<BudgetLine | null>(null);
@@ -129,7 +138,7 @@ export function BudgetTable({ lines, isLoading, canEdit, onLineUpdate, onLineDel
           </TableHeader>
           <TableBody>
             {lines.map((line) => {
-              const categoryColor = BUDGET_CATEGORY_COLORS[line.category];
+              const categoryColor = getCategoryColor(line.category);
               const lineTotal = line.quantity * line.unitPrice;
               const vatAmount = line.vatPercent ? lineTotal * (line.vatPercent / 100) : 0;
               const totalWithVat = lineTotal + vatAmount;
@@ -157,7 +166,7 @@ export function BudgetTable({ lines, isLoading, canEdit, onLineUpdate, onLineDel
                       style={{ borderColor: categoryColor, color: categoryColor }}
                       className="text-xs"
                     >
-                      {BUDGET_CATEGORY_LABELS[line.category]}
+                      {line.category}
                     </Badge>
                   </TableCell>
                   <TableCell>{line.quantity.toLocaleString()}</TableCell>
