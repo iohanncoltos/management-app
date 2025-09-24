@@ -11,6 +11,14 @@ function handleAuthError(error: unknown) {
   return null;
 }
 
+const BUDGET_CATEGORY_SET = new Set<BudgetCategory>(Object.values(BudgetCategory));
+
+function normalizeCategory(category: string): BudgetCategory {
+  return BUDGET_CATEGORY_SET.has(category as BudgetCategory)
+    ? (category as BudgetCategory)
+    : BudgetCategory.OTHER;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -76,8 +84,9 @@ export async function GET(request: Request) {
       const lineTotal = Number(line.quantity) * Number(line.unitPrice);
       const vatAmount = line.vatPercent ? lineTotal * (Number(line.vatPercent) / 100) : 0;
       const lineTotalWithVat = lineTotal + vatAmount;
+      const categoryKey = normalizeCategory(line.category);
 
-      totalsByCategory[line.category] += lineTotalWithVat;
+      totalsByCategory[categoryKey] += lineTotalWithVat;
       grandTotal += lineTotalWithVat;
     }
 
