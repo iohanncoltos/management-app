@@ -141,11 +141,11 @@ export function categorizeBudgetItem(
     .toLowerCase();
 
   const scores: Record<BudgetCategory, number> = {
-    [BudgetCategoryValues.MECHANICAL]: 0,
-    [BudgetCategoryValues.ELECTRICAL]: 0,
-    [BudgetCategoryValues.SYSTEMS]: 0,
-    [BudgetCategoryValues.SOFTWARE]: 0,
-    [BudgetCategoryValues.OTHER]: 0,
+    MECHANICAL: 0,
+    ELECTRICAL: 0,
+    SYSTEMS: 0,
+    SOFTWARE: 0,
+    OTHER: 0,
   };
 
   // Score based on keyword matches
@@ -196,20 +196,20 @@ export function categorizeBudgetItem(
 
 // Helper function to get human-readable category labels
 export const BUDGET_CATEGORY_LABELS: Record<BudgetCategory, string> = {
-  [BudgetCategoryValues.MECHANICAL]: "Mechanical",
-  [BudgetCategoryValues.ELECTRICAL]: "Electrical",
-  [BudgetCategoryValues.SYSTEMS]: "Systems",
-  [BudgetCategoryValues.SOFTWARE]: "Software",
-  [BudgetCategoryValues.OTHER]: "Other",
+  MECHANICAL: "Mechanical",
+  ELECTRICAL: "Electrical",
+  SYSTEMS: "Systems",
+  SOFTWARE: "Software",
+  OTHER: "Other",
 };
 
 // Helper function to get category colors for charts
 export const BUDGET_CATEGORY_COLORS: Record<BudgetCategory, string> = {
-  [BudgetCategoryValues.MECHANICAL]: "#3B82F6", // Blue
-  [BudgetCategoryValues.ELECTRICAL]: "#F59E0B", // Amber
-  [BudgetCategoryValues.SYSTEMS]: "#10B981", // Emerald
-  [BudgetCategoryValues.SOFTWARE]: "#8B5CF6", // Violet
-  [BudgetCategoryValues.OTHER]: "#6B7280", // Gray
+  MECHANICAL: "#3B82F6", // Blue
+  ELECTRICAL: "#F59E0B", // Amber
+  SYSTEMS: "#10B981", // Emerald
+  SOFTWARE: "#8B5CF6", // Violet
+  OTHER: "#6B7280", // Gray
 };
 
 export const BUDGET_CATEGORY_OPTIONS = Object.values(BudgetCategoryValues).map(value => ({

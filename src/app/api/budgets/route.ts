@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     await requireProjectView(projectId);
 
     // Get or create budget sheet for project
-    let sheet = await prisma.budgetSheet.findUnique({
+    const sheet = await prisma.budgetSheet.findUnique({
       where: { projectId },
       include: {
         lines: true,

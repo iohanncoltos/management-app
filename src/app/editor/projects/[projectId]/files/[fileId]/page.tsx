@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { X, User } from "lucide-react";
+import { X } from "lucide-react";
 
 import { OnlyOfficeViewer } from "@/components/projects/onlyoffice-viewer";
 import { Button } from "@/components/ui/button";

@@ -44,8 +44,8 @@ export async function GET(request: Request) {
 
     await requireProjectView(projectId);
 
-    // Get or create budget sheet
-    let sheet = await prisma.budgetSheet.findUnique({
+    // Get budget sheet
+    const sheet = await prisma.budgetSheet.findUnique({
       where: { projectId },
     });
 
@@ -58,7 +58,7 @@ export async function GET(request: Request) {
     }
 
     // Build where clause
-    const where: any = {
+    const where: Record<string, unknown> = {
       sheetId: sheet.id,
     };
 

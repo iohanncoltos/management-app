@@ -54,8 +54,6 @@ export default async function BudgetWorkspacePage({ params }: BudgetWorkspacePag
   return (
     <BudgetWorkspace
       project={project}
-      userId={session.user.id}
-      userName={session.user.name ?? session.user.email ?? "User"}
       canEdit={canEdit}
     />
   );

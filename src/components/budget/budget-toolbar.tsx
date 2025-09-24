@@ -31,12 +31,11 @@ interface BudgetToolbarProps {
 
 export function BudgetToolbar({
   canEdit,
-  projectId,
   filters,
   onFiltersChange,
   onRefresh,
 }: BudgetToolbarProps) {
-  const updateFilter = (key: keyof BudgetFilters, value: any) => {
+  const updateFilter = (key: keyof BudgetFilters, value: string | BudgetCategory | null) => {
     onFiltersChange({
       ...filters,
       [key]: value,
@@ -167,12 +166,12 @@ export function BudgetToolbar({
               )}
               {filters.search && (
                 <span className="bg-primary/10 text-primary px-2 py-1 rounded text-xs">
-                  Search: "{filters.search}"
+                  Search: &quot;{filters.search}&quot;
                 </span>
               )}
               {filters.supplier && (
                 <span className="bg-primary/10 text-primary px-2 py-1 rounded text-xs">
-                  Supplier: "{filters.supplier}"
+                  Supplier: &quot;{filters.supplier}&quot;
                 </span>
               )}
             </div>

@@ -12,7 +12,6 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BudgetCategory } from "@prisma/client";
 
 interface Project {
@@ -48,12 +47,10 @@ interface BudgetTotals {
 
 interface BudgetWorkspaceProps {
   project: Project;
-  userId: string;
-  userName: string;
   canEdit: boolean;
 }
 
-export function BudgetWorkspace({ project, userId, userName, canEdit }: BudgetWorkspaceProps) {
+export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
   const [lines, setLines] = useState<BudgetLine[]>([]);
   const [totals, setTotals] = useState<BudgetTotals>({
     total: 0,

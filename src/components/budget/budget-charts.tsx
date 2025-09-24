@@ -8,7 +8,7 @@ import { BudgetCategory } from "@prisma/client";
 // Chart.js imports
 declare global {
   interface Window {
-    Chart: any;
+    Chart: typeof import('chart.js').Chart;
   }
 }
 
@@ -24,7 +24,7 @@ interface BudgetChartsProps {
 
 export function BudgetCharts({ totals }: BudgetChartsProps) {
   const chartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstanceRef = useRef<any>(null);
+  const chartInstanceRef = useRef<import('chart.js').Chart | null>(null);
 
   useEffect(() => {
     // Dynamically import Chart.js
@@ -108,7 +108,7 @@ export function BudgetCharts({ totals }: BudgetChartsProps) {
           },
           tooltip: {
             callbacks: {
-              label: function(context: any) {
+              label: function(context: { parsed: number; label: string }) {
                 const value = context.parsed;
                 const percentage = ((value / totals.total) * 100).toFixed(1);
                 return `${context.label}: €${value.toLocaleString()} (${percentage}%)`;
@@ -169,7 +169,7 @@ export function BudgetCharts({ totals }: BudgetChartsProps) {
         <CardContent>
           {categoryEntries.length > 0 ? (
             <div className="space-y-3">
-              {categoryEntries.map((entry, index) => {
+              {categoryEntries.map((entry) => {
                 const percentage = totals.total > 0 ? (entry.amount / totals.total) * 100 : 0;
                 return (
                   <div key={entry.category} className="space-y-2">
