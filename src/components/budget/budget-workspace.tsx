@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ArrowLeft, Plus, Download, Upload, BookOpen } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { DoughnutChart } from "@/components/charts/doughnut-chart";
 
 import { BudgetTable } from "./budget-table";
 import { BudgetCharts } from "./budget-charts";
@@ -38,6 +41,12 @@ interface BudgetLine {
   createdBy: string;
 }
 
+interface BudgetSheetSummary {
+  id: string;
+  vatDefault: number | null;
+  currency: string;
+}
+
 interface BudgetTotals {
   total: number;
   totalsByCategory: Record<string, number>;
@@ -58,11 +67,18 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [filters, setFilters] = useState({
-    category: null as string | null,
+  const [filters, setFilters] = useState<{ category: string | null; search: string; supplier: string }>({
+    category: null,
     search: "",
     supplier: "",
   });
+  const [sheet, setSheet] = useState<BudgetSheetSummary | null>(null);
+  const [vatInput, setVatInput] = useState<string>("");
+  const [isSavingVat, setIsSavingVat] = useState(false);
+  const [plannedBudget, setPlannedBudget] = useState<number | null>(null);
+  const [plannedInput, setPlannedInput] = useState<string>("");
+  const [isSavingPlanned, setIsSavingPlanned] = useState(false);
+  const [lastSyncedActual, setLastSyncedActual] = useState<number | null>(null);
 
   const fetchBudgetData = useCallback(async () => {
     setIsLoading(true);
@@ -75,6 +91,35 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
       if (budgetResponse.ok) {
         const budgetData = await budgetResponse.json();
         setTotals(budgetData.totals);
+        if (budgetData.sheet) {
+          const nextSheet: BudgetSheetSummary = {
+            id: budgetData.sheet.id,
+            vatDefault: budgetData.sheet.vatDefault,
+            currency: budgetData.sheet.currency,
+          };
+          setSheet(nextSheet);
+          setVatInput(
+            typeof budgetData.sheet.vatDefault === "number" && !Number.isNaN(budgetData.sheet.vatDefault)
+              ? String(budgetData.sheet.vatDefault)
+              : ""
+          );
+        } else {
+          setSheet(null);
+          setVatInput("");
+        }
+
+        if (budgetData.project) {
+          const planned = budgetData.project.budgetPlanned ?? null;
+          setPlannedBudget(planned);
+          setPlannedInput(planned !== null ? String(planned) : "");
+
+          const actual = budgetData.project.budgetActual ?? null;
+          setLastSyncedActual(actual);
+        } else {
+          setPlannedBudget(null);
+          setPlannedInput("");
+          setLastSyncedActual(null);
+        }
       }
 
       if (linesResponse.ok) {
@@ -107,6 +152,130 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
     setLines(prev => prev.filter(line => line.id !== deletedLineId));
     fetchBudgetData(); // Refresh totals
   };
+
+  const handlePlannedSave = async () => {
+    if (!canEdit || isSavingPlanned) {
+      return;
+    }
+
+    const trimmed = plannedInput.trim();
+    let parsed: number | null = null;
+    if (trimmed !== "") {
+      const numeric = Number(trimmed);
+      if (Number.isNaN(numeric) || numeric < 0) {
+        toast.error("Enter a valid planned budget amount");
+        return;
+      }
+      parsed = numeric;
+    }
+
+    setIsSavingPlanned(true);
+    try {
+      const response = await fetch(`/api/projects/${project.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ budgetPlanned: parsed ?? 0 }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.message ?? "Unable to update planned budget");
+      }
+
+      const updated = await response.json();
+      const nextPlanned = typeof updated.budgetPlanned === "number" ? updated.budgetPlanned : null;
+      setPlannedBudget(nextPlanned);
+      setPlannedInput(nextPlanned !== null ? String(nextPlanned) : "");
+      toast.success("Planned budget updated");
+      fetchBudgetData();
+    } catch (error) {
+      console.error("Error updating planned budget:", error);
+      toast.error(error instanceof Error ? error.message : "Unable to update planned budget");
+    } finally {
+      setIsSavingPlanned(false);
+    }
+  };
+
+  const handleVatSave = async () => {
+    if (!canEdit || isSavingVat) return;
+
+    const trimmed = vatInput.trim();
+    let parsed: number | null = null;
+    if (trimmed !== "") {
+      const numeric = Number(trimmed);
+      if (Number.isNaN(numeric) || numeric < 0 || numeric > 100) {
+        toast.error("Enter a VAT percentage between 0 and 100.");
+        return;
+      }
+      parsed = numeric;
+    }
+
+    setIsSavingVat(true);
+    try {
+      const response = await fetch("/api/budgets", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id, vatPercent: parsed }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.message ?? "Unable to update VAT");
+      }
+
+      const updated: { id: string; vatDefault: number | null; currency: string } = await response.json();
+      setSheet(updated);
+      setVatInput(
+        typeof updated.vatDefault === "number" && !Number.isNaN(updated.vatDefault) ? String(updated.vatDefault) : ""
+      );
+      toast.success("Default VAT updated");
+      await fetchBudgetData();
+    } catch (error) {
+      console.error("Error updating VAT:", error);
+      toast.error(error instanceof Error ? error.message : "Unable to update VAT");
+    } finally {
+      setIsSavingVat(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!canEdit || !sheet) {
+      return;
+    }
+
+    const actual = Number.isFinite(totals.total) ? Number(totals.total) : 0;
+    if (lastSyncedActual !== null && Math.abs(actual - lastSyncedActual) < 0.01) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncActual = async () => {
+      try {
+        const response = await fetch(`/api/projects/${project.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ budgetActual: actual }),
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        if (!cancelled) {
+          setLastSyncedActual(actual);
+        }
+      } catch (error) {
+        console.error("Failed to sync actual spend", error);
+      }
+    };
+
+    syncActual();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [totals.total, project.id, canEdit, sheet, lastSyncedActual]);
 
   const filteredLines = lines.filter(line => {
     if (filters.category && line.category !== filters.category) return false;
@@ -184,9 +353,61 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
                 lines={filteredLines}
                 isLoading={isLoading}
                 canEdit={canEdit}
+                defaultVat={sheet?.vatDefault ?? null}
                 onLineUpdate={handleLineUpdated}
                 onLineDelete={handleLineDeleted}
               />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Budget Health</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-3">
+              <DoughnutChart
+                data={{
+                  labels: ["Planned", "Actual"],
+                  datasets: [
+                    {
+                      data: [plannedBudget ?? 0, totals.total],
+                      backgroundColor: ["#3a7bd5", "#b03636"],
+                      borderWidth: 2,
+                    },
+                  ],
+                }}
+                options={{
+                  plugins: {
+                    legend: { position: "top" },
+                  },
+                }}
+                size={160}
+              />
+
+              <div className="grid w-full gap-3 md:grid-cols-3 text-sm text-muted-foreground">
+                <div>
+                  <p className="text-xs uppercase tracking-wide">Planned Budget</p>
+                  <p className="text-lg font-semibold text-foreground">€{(plannedBudget ?? 0).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide">Actual Spend</p>
+                  <p className="text-lg font-semibold text-foreground">€{totals.total.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide">Variance</p>
+                  <p
+                    className={`text-lg font-semibold ${
+                      plannedBudget !== null && plannedBudget > 0 && totals.total > plannedBudget
+                        ? "text-destructive"
+                        : "text-chart-teal"
+                    }`}
+                  >
+                    {plannedBudget !== null && plannedBudget > 0
+                      ? `${(((totals.total - plannedBudget) / plannedBudget) * 100).toFixed(1)}%`
+                      : "—"}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -219,6 +440,53 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
                   <span className="text-muted-foreground">Total Line Items</span>
                   <span className="font-semibold">{totals.linesCount}</span>
                 </div>
+              </div>
+
+              <div className="pt-4 border-t space-y-2">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Default VAT (%)</p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={vatInput}
+                    onChange={(event) => setVatInput(event.target.value)}
+                    className="w-24"
+                    disabled={!canEdit || isSavingVat}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleVatSave}
+                    disabled={!canEdit || isSavingVat}
+                  >
+                    {isSavingVat ? "Saving" : "Save"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Applied automatically to every line item in this budget.
+                </p>
+              </div>
+
+              <div className="pt-4 border-t space-y-2">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Planned Budget (€)</p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={plannedInput}
+                    onChange={(event) => setPlannedInput(event.target.value)}
+                    className="w-28"
+                    disabled={!canEdit || isSavingPlanned}
+                  />
+                  <Button size="sm" onClick={handlePlannedSave} disabled={!canEdit || isSavingPlanned}>
+                    {isSavingPlanned ? "Saving" : "Save"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Used to monitor variance between planned and actual spend.
+                </p>
               </div>
             </CardContent>
           </Card>

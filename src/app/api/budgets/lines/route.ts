@@ -12,7 +12,6 @@ const createLineSchema = z.object({
   unit: z.string().max(50).optional(),
   unitPrice: z.number().min(0),
   currency: z.string().length(3).optional().default("EUR"),
-  vatPercent: z.number().min(0).max(100).optional(),
   supplier: z.string().max(100).optional(),
   link: z.string().url().optional(),
   notes: z.string().max(500).optional(),
@@ -92,6 +91,8 @@ export async function GET(request: Request) {
       take: limit,
     });
 
+    const defaultVat = sheet.vatDefault ? Number(sheet.vatDefault) : null;
+
     const serializedLines = lines.map((line) => ({
       id: line.id,
       name: line.name,
@@ -100,7 +101,7 @@ export async function GET(request: Request) {
       unit: line.unit,
       unitPrice: Number(line.unitPrice),
       currency: line.currency,
-      vatPercent: line.vatPercent ? Number(line.vatPercent) : null,
+      vatPercent: line.vatPercent ? Number(line.vatPercent) : defaultVat,
       supplier: line.supplier,
       link: line.link,
       notes: line.notes,
@@ -163,6 +164,7 @@ export async function POST(request: Request) {
         ...data,
         sheetId: sheet.id,
         createdById: session.user.id,
+        vatPercent: sheet.vatDefault,
       },
       include: {
         createdBy: {
@@ -188,7 +190,7 @@ export async function POST(request: Request) {
       unit: line.unit,
       unitPrice: Number(line.unitPrice),
       currency: line.currency,
-      vatPercent: line.vatPercent ? Number(line.vatPercent) : null,
+      vatPercent: line.vatPercent ? Number(line.vatPercent) : sheet.vatDefault ? Number(sheet.vatDefault) : null,
       supplier: line.supplier,
       link: line.link,
       notes: line.notes,

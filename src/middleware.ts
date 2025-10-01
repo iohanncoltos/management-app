@@ -4,18 +4,39 @@ import type { NextRequestWithAuth } from "next-auth/middleware";
 
 const ADMIN_PATHS = ["/admin"];
 const MANAGE_USERS = "MANAGE_USERS";
+const ONBOARDED_COOKIE = "intermax_onboarded";
 
 export default withAuth(
   function middleware(request: NextRequestWithAuth) {
-    const token = request.nextauth.token;
+    const authToken = request.nextauth.token;
+    const pathname = request.nextUrl.pathname;
 
-    if (!token?.sub) {
-      return NextResponse.redirect(new URL("/login", request.url));
+    if (!authToken?.sub) {
+      const isAuthRoute = pathname === "/login" || pathname === "/register";
+
+      if (!isAuthRoute && !pathname.startsWith("/api")) {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+
+      if ((pathname === "/" || pathname === "/login") && !request.cookies.get(ONBOARDED_COOKIE)) {
+        const response = NextResponse.redirect(new URL("/register", request.url));
+        response.cookies.set(ONBOARDED_COOKIE, "1", { path: "/", maxAge: 60 * 60 * 24 * 365 });
+        return response;
+      }
+
+      if (pathname === "/") {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+
+      return NextResponse.next();
     }
 
-    const pathname = request.nextUrl.pathname;
+    if (pathname === "/" || pathname === "/login" || pathname === "/register") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
     const isAdminRoute = ADMIN_PATHS.some((path) => pathname.startsWith(path));
-    const permissions = Array.isArray(token.permissions) ? (token.permissions as string[]) : [];
+    const permissions = Array.isArray(authToken.permissions) ? (authToken.permissions as string[]) : [];
     if (isAdminRoute && !permissions.includes(MANAGE_USERS)) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
@@ -24,13 +45,16 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token }) => Boolean(token),
+      authorized: () => true,
     },
   },
 );
 
 export const config = {
   matcher: [
+    "/",
+    "/login",
+    "/register",
     "/dashboard",
     "/projects/:path*",
     "/admin/:path*",

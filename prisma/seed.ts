@@ -110,6 +110,15 @@ async function ensureAdminAccount() {
     if (!existing.roleId) {
       await prisma.user.update({ where: { id: existing.id }, data: { roleId: adminRole.id } });
     }
+    await prisma.userPreference.upsert({
+      where: { userId: existing.id },
+      update: {},
+      create: {
+        userId: existing.id,
+        theme: "DARK",
+        density: "COMFORTABLE",
+      },
+    });
     console.log(`Admin account already exists for ${email}`);
     return;
   }
@@ -129,6 +138,17 @@ async function ensureAdminAccount() {
       roleId: adminRole.id,
     },
   });
+
+  const admin = await prisma.user.findUnique({ where: { email } });
+  if (admin) {
+    await prisma.userPreference.create({
+      data: {
+        userId: admin.id,
+        theme: "DARK",
+        density: "COMFORTABLE",
+      },
+    });
+  }
 
   console.log("Seeded admin account:\n" + `  email: ${email}\n` + `  password: ${password}`);
 }

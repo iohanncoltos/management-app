@@ -13,10 +13,9 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { BUDGET_CATEGORY_OPTIONS } from "@/lib/budgetCategorizer";
-import { BudgetCategory } from "@prisma/client";
 
 interface BudgetFilters {
-  category: BudgetCategory | null;
+  category: string | null;
   search: string;
   supplier: string;
 }
@@ -31,11 +30,12 @@ interface BudgetToolbarProps {
 
 export function BudgetToolbar({
   canEdit,
+  projectId,
   filters,
   onFiltersChange,
   onRefresh,
 }: BudgetToolbarProps) {
-  const updateFilter = (key: keyof BudgetFilters, value: string | BudgetCategory | null) => {
+  const updateFilter = (key: keyof BudgetFilters, value: string | null) => {
     onFiltersChange({
       ...filters,
       [key]: value,
@@ -93,14 +93,11 @@ export function BudgetToolbar({
                 Export Excel
               </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                disabled // TODO: Implement PDF export
-                className="flex items-center gap-2"
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-                Export PDF
+              <Button variant="outline" size="sm" className="flex items-center gap-2" asChild>
+                <a href={`/api/budgets/export?projectId=${projectId}`} target="_blank" rel="noopener noreferrer">
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Export PDF
+                </a>
               </Button>
             </div>
 

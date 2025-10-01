@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -40,7 +39,6 @@ const addLineSchema = z.object({
   unit: z.string().max(50).optional(),
   unitPrice: z.number().min(0, "Unit price must be non-negative"),
   currency: z.string().length(3).optional(),
-  vatPercent: z.number().min(0).max(100).optional(),
   supplier: z.string().max(100).optional(),
   link: z.string().url("Invalid URL").optional().or(z.literal("")),
   notes: z.string().max(500).optional(),
@@ -96,7 +94,6 @@ export function AddLineDialog({ isOpen, onClose, projectId, onLineAdded }: AddLi
       unit: "",
       unitPrice: 0,
       currency: "EUR",
-      vatPercent: 0,
       supplier: "",
       link: "",
       notes: "",
@@ -267,28 +264,6 @@ export function AddLineDialog({ isOpen, onClose, projectId, onLineAdded }: AddLi
                           <SelectItem value="JPY">JPY (¥)</SelectItem>
                         </SelectContent>
                       </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="vatPercent"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>VAT %</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        placeholder="20"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
-                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -65,8 +65,8 @@ export function RegisterForm() {
     <Form {...form}>
       <form onSubmit={onSubmit} className="space-y-6">
         <div className="space-y-2 text-center">
-          <h1 className="font-display text-2xl font-semibold text-foreground">Request Access</h1>
-          <p className="text-sm text-muted-foreground">Submit your details for operator provisioning.</p>
+          <h1 className="font-display text-2xl font-semibold text-foreground">Sign Up</h1>
+          <p className="text-sm text-muted-foreground">Create your Intermax account to request operator access.</p>
         </div>
         <FormField
           control={form.control}

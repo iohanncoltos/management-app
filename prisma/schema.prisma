@@ -57,6 +57,17 @@ enum TaskStatus {
   COMPLETED
 }
 
+enum ThemePreference {
+  SYSTEM
+  LIGHT
+  DARK
+}
+
+enum LayoutDensityPreference {
+  COMFORTABLE
+  COMPACT
+}
+
 model Role {
   id          String       @id @default(cuid())
   name        String       @unique
@@ -99,6 +110,7 @@ model User {
   approvedBudgetSheets BudgetSheet[]   @relation("BudgetSheetApprovedBy")
   budgetLines          BudgetLine[]
   budgetVersions       BudgetVersion[]
+  preference           UserPreference?
 }
 
 model Project {
@@ -310,4 +322,13 @@ model BudgetVersion {
   createdBy    User        @relation(fields: [createdById], references: [id])
   createdAt    DateTime    @default(now())
   snapshotJson Json        // store snapshot for fast restore/compare
+}
+
+model UserPreference {
+  userId   String @id
+  theme    ThemePreference           @default(DARK)
+  density  LayoutDensityPreference   @default(COMFORTABLE)
+  createdAt DateTime                 @default(now())
+  updatedAt DateTime                 @updatedAt
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

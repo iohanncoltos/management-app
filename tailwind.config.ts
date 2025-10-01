@@ -18,39 +18,39 @@ const config: Config = {
     },
     extend: {
       colors: {
-        background: "#0f1115",
-        foreground: "#eaf0f6",
+        background: "rgb(var(--background) / <alpha-value>)",
+        foreground: "rgb(var(--foreground) / <alpha-value>)",
         card: {
-          DEFAULT: "#161a22",
-          foreground: "#eaf0f6",
+          DEFAULT: "rgb(var(--card) / <alpha-value>)",
+          foreground: "rgb(var(--card-foreground) / <alpha-value>)",
         },
         popover: {
-          DEFAULT: "#161a22",
-          foreground: "#eaf0f6",
+          DEFAULT: "rgb(var(--popover) / <alpha-value>)",
+          foreground: "rgb(var(--popover-foreground) / <alpha-value>)",
         },
         primary: {
-          DEFAULT: "#b03636",
-          foreground: "#eaf0f6",
+          DEFAULT: "rgb(var(--primary) / <alpha-value>)",
+          foreground: "rgb(var(--primary-foreground) / <alpha-value>)",
         },
         secondary: {
-          DEFAULT: "#1f242e",
-          foreground: "#eaf0f6",
+          DEFAULT: "rgb(var(--secondary) / <alpha-value>)",
+          foreground: "rgb(var(--secondary-foreground) / <alpha-value>)",
         },
         muted: {
-          DEFAULT: "#1f242e",
-          foreground: "#9aa4b2",
+          DEFAULT: "rgb(var(--muted) / <alpha-value>)",
+          foreground: "rgb(var(--muted-foreground) / <alpha-value>)",
         },
         accent: {
-          DEFAULT: "#9b2c2c",
-          foreground: "#eaf0f6",
+          DEFAULT: "rgb(var(--accent) / <alpha-value>)",
+          foreground: "rgb(var(--accent-foreground) / <alpha-value>)",
         },
         destructive: {
-          DEFAULT: "#ff4d4f",
-          foreground: "#fff",
+          DEFAULT: "rgb(var(--destructive) / <alpha-value>)",
+          foreground: "rgb(var(--destructive-foreground) / <alpha-value>)",
         },
-        border: "#1f242e",
-        input: "#1f242e",
-        ring: "#b03636",
+        border: "rgb(var(--border) / <alpha-value>)",
+        input: "rgb(var(--input) / <alpha-value>)",
+        ring: "rgb(var(--ring) / <alpha-value>)",
         chart: {
           red: "#ff5c5c",
           teal: "#3bb2ad",

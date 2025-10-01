@@ -41,6 +41,7 @@ export function LoginForm() {
         });
 
         if (res?.error) {
+          form.setError("password", { message: "Invalid email or password" });
           toast.error("Authentication failed", {
             description: "Check your credentials and try again.",
           });
@@ -114,7 +115,7 @@ export function LoginForm() {
           {isPending ? "Verifying" : "Enter command"}
         </Button>
         <p className="text-center text-xs text-muted-foreground">
-          Need an account? <Link href="/register" className="font-semibold text-accent hover:text-primary">Request access</Link>
+          Need an account? <Link href="/register" className="font-semibold text-accent hover:text-primary">Sign up</Link>
         </p>
       </form>
     </Form>

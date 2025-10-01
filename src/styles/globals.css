@@ -10,7 +10,7 @@
 
 html, body {
   height: 100%;
-  background-color: var(--intermax-bg);
+  background-color: rgb(var(--background));
 }
 
 body {

@@ -1,28 +1,72 @@
 :root {
-  --intermax-bg: #0f1115;
-  --intermax-panel: #161a22;
-  --intermax-accent: #9b2c2c;
-  --intermax-accent-strong: #b03636;
-  --intermax-text: #eaf0f6;
-  --intermax-text-muted: #9aa4b2;
-  --intermax-border: #1f242e;
+  --background: 15 17 21;
+  --foreground: 234 240 246;
+  --card: 22 26 34;
+  --card-foreground: 234 240 246;
+  --popover: 22 26 34;
+  --popover-foreground: 234 240 246;
+  --primary: 176 54 54;
+  --primary-foreground: 234 240 246;
+  --secondary: 31 36 46;
+  --secondary-foreground: 234 240 246;
+  --muted: 31 36 46;
+  --muted-foreground: 154 164 178;
+  --accent: 155 44 44;
+  --accent-foreground: 234 240 246;
+  --destructive: 255 77 79;
+  --destructive-foreground: 255 255 255;
+  --border: 31 36 46;
+  --input: 31 36 46;
+  --ring: 176 54 54;
   --intermax-success: #3bb2ad;
   --intermax-warning: #e0b341;
   --intermax-danger: #ff4d4f;
+  --shell-padding-x: 1.5rem;
+  --shell-padding-top: 1.5rem;
+  --shell-padding-bottom: 2.5rem;
+  --layout-section-gap: 1.5rem;
 }
 
 [data-theme="light"] {
-  --intermax-bg: #f9fbff;
-  --intermax-panel: #ffffff;
-  --intermax-text: #0f1115;
-  --intermax-text-muted: #3c4758;
-  --intermax-border: #d6deeb;
+  --background: 249 251 255;
+  --foreground: 15 17 21;
+  --card: 255 255 255;
+  --card-foreground: 15 17 21;
+  --popover: 255 255 255;
+  --popover-foreground: 15 17 21;
+  --secondary: 238 241 245;
+  --secondary-foreground: 15 17 21;
+  --muted: 238 241 245;
+  --muted-foreground: 60 71 88;
+  --accent: 155 44 44;
+  --accent-foreground: 255 255 255;
+  --destructive: 215 65 67;
+  --destructive-foreground: 255 255 255;
+  --border: 214 222 235;
+  --input: 214 222 235;
+  --ring: 176 54 54;
+}
+
+html[data-theme="light"],
+body[data-theme="light"] {
+  color-scheme: light;
+}
+
+html[data-theme="dark"],
+body[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 body {
-  color-scheme: dark;
-  background: var(--intermax-bg);
-  color: var(--intermax-text);
+  background: rgb(var(--background));
+  color: rgb(var(--foreground));
+}
+
+[data-density="compact"] {
+  --shell-padding-x: 1.25rem;
+  --shell-padding-top: 1.125rem;
+  --shell-padding-bottom: 1.75rem;
+  --layout-section-gap: 1.1rem;
 }
 
 ::-webkit-scrollbar {

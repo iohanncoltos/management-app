@@ -1,8 +1,9 @@
 import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
-import { AuthorizationError, canViewProject, requireSession } from "@/lib/authz";
+import { AuthorizationError, canViewProject, requireProjectBudgetEdit, requireSession } from "@/lib/authz";
 import { prisma } from "@/lib/db";
+import { z } from "zod";
 
 const projectInclude = {
   memberships: {
@@ -95,6 +96,54 @@ export async function GET(_request: Request, context: RouteContext) {
     }
 
     return NextResponse.json(serializeProject(project));
+  } catch (error) {
+    const handled = handleAuthError(error);
+    if (handled) return handled;
+    throw error;
+  }
+}
+
+const updateBudgetSchema = z.object({
+  budgetPlanned: z.number().min(0).optional(),
+  budgetActual: z.number().min(0).optional(),
+});
+
+export async function PATCH(request: Request, context: RouteContext) {
+  try {
+    const { projectId } = await context.params;
+
+    await requireProjectBudgetEdit(projectId);
+
+    const payload = await request.json().catch(() => null);
+    const parsed = updateBudgetSchema.safeParse(payload);
+
+    if (!parsed.success) {
+      return NextResponse.json({ message: "Invalid payload", issues: parsed.error.issues }, { status: 400 });
+    }
+
+    const data: Record<string, unknown> = {};
+    if (parsed.data.budgetPlanned !== undefined) {
+      data.budgetPlanned = parsed.data.budgetPlanned;
+    }
+    if (parsed.data.budgetActual !== undefined) {
+      data.budgetActual = parsed.data.budgetActual;
+    }
+
+    const updated = await prisma.project.update({
+      where: { id: projectId },
+      data,
+      select: {
+        id: true,
+        budgetPlanned: true,
+        budgetActual: true,
+      },
+    });
+
+    return NextResponse.json({
+      id: updated.id,
+      budgetPlanned: updated.budgetPlanned ? Number(updated.budgetPlanned) : null,
+      budgetActual: updated.budgetActual ? Number(updated.budgetActual) : null,
+    });
   } catch (error) {
     const handled = handleAuthError(error);
     if (handled) return handled;

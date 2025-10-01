@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { Bell, LogOut, Search, Settings, User } from "lucide-react";
 
@@ -54,11 +55,15 @@ export function Topbar({ user }: TopbarProps) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 text-sm" onSelect={(event) => event.preventDefault()}>
-              <User className="h-4 w-4" /> Profile
+            <DropdownMenuItem asChild className="text-sm">
+              <Link href="/profile" className="flex items-center gap-2">
+                <User className="h-4 w-4" /> Profile
+              </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 text-sm" onSelect={(event) => event.preventDefault()}>
-              <Settings className="h-4 w-4" /> Preferences
+            <DropdownMenuItem asChild className="text-sm">
+              <Link href="/preferences" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" /> Preferences
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2 text-sm text-destructive" onSelect={() => signOut({ callbackUrl: "/login" })}>

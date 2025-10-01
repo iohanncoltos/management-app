@@ -48,6 +48,7 @@ interface BudgetTableProps {
   lines: BudgetLine[];
   isLoading: boolean;
   canEdit: boolean;
+  defaultVat: number | null;
   onLineUpdate: (line: BudgetLine) => void;
   onLineDelete: (lineId: string) => void;
 }
@@ -63,7 +64,7 @@ const getCategoryColor = (category: string): string => {
   return colors[category] || "#6b7280";
 };
 
-export function BudgetTable({ lines, isLoading, canEdit, onLineUpdate, onLineDelete }: BudgetTableProps) {
+export function BudgetTable({ lines, isLoading, canEdit, defaultVat, onLineUpdate, onLineDelete }: BudgetTableProps) {
   const [editingLine, setEditingLine] = useState<BudgetLine | null>(null);
   const [deletingLineId, setDeletingLineId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -126,13 +127,9 @@ export function BudgetTable({ lines, isLoading, canEdit, onLineUpdate, onLineDel
               <TableHead className="min-w-[200px]">Part/Item Name</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Qty</TableHead>
-              <TableHead>Unit</TableHead>
               <TableHead>Unit Price</TableHead>
               <TableHead>Currency</TableHead>
-              <TableHead>VAT %</TableHead>
               <TableHead>Line Total</TableHead>
-              <TableHead>Supplier</TableHead>
-              <TableHead>Notes</TableHead>
               {canEdit && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
@@ -140,7 +137,8 @@ export function BudgetTable({ lines, isLoading, canEdit, onLineUpdate, onLineDel
             {lines.map((line) => {
               const categoryColor = getCategoryColor(line.category);
               const lineTotal = line.quantity * line.unitPrice;
-              const vatAmount = line.vatPercent ? lineTotal * (line.vatPercent / 100) : 0;
+              const vatRate = line.vatPercent ?? defaultVat ?? 0;
+              const vatAmount = vatRate ? lineTotal * (vatRate / 100) : 0;
               const totalWithVat = lineTotal + vatAmount;
 
               return (
@@ -170,26 +168,14 @@ export function BudgetTable({ lines, isLoading, canEdit, onLineUpdate, onLineDel
                     </Badge>
                   </TableCell>
                   <TableCell>{line.quantity.toLocaleString()}</TableCell>
-                  <TableCell className="text-muted-foreground">{line.unit || "—"}</TableCell>
                   <TableCell>{formatCurrency(line.unitPrice, line.currency)}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-xs">
                       {line.currency}
                     </Badge>
                   </TableCell>
-                  <TableCell>{line.vatPercent ? `${line.vatPercent}%` : "—"}</TableCell>
                   <TableCell className="font-semibold">
                     {formatCurrency(totalWithVat, line.currency)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{line.supplier || "—"}</TableCell>
-                  <TableCell>
-                    {line.notes ? (
-                      <div className="max-w-[150px] truncate text-sm text-muted-foreground" title={line.notes}>
-                        {line.notes}
-                      </div>
-                    ) : (
-                      "—"
-                    )}
                   </TableCell>
                   {canEdit && (
                     <TableCell className="text-right">

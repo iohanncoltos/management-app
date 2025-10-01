@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { BudgetCategory } from "@prisma/client";
+import { BudgetCategory, Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { recordAuditEvent } from "@/lib/audit";
@@ -13,7 +13,6 @@ const updateLineSchema = z.object({
   unit: z.string().max(50).optional(),
   unitPrice: z.number().min(0).optional(),
   currency: z.string().length(3).optional(),
-  vatPercent: z.number().min(0).max(100).optional(),
   supplier: z.string().max(100).optional(),
   link: z.string().url().optional(),
   notes: z.string().max(500).optional(),
@@ -50,7 +49,7 @@ export async function PATCH(
       where: { id },
       include: {
         sheet: {
-          select: { projectId: true },
+          select: { projectId: true, vatDefault: true },
         },
       },
     });
@@ -72,10 +71,12 @@ export async function PATCH(
       finalCategory = categorizeBudgetItem(nameToUse, unitToUse, supplierToUse, notesToUse);
     }
 
-    const updateData = { ...data };
+    const updateData: Prisma.BudgetLineUpdateInput = { ...data };
     if (finalCategory) {
       updateData.category = finalCategory;
     }
+
+    updateData.vatPercent = existingLine.sheet.vatDefault ?? undefined;
 
     const line = await prisma.budgetLine.update({
       where: { id },
@@ -104,7 +105,7 @@ export async function PATCH(
       unit: line.unit,
       unitPrice: Number(line.unitPrice),
       currency: line.currency,
-      vatPercent: line.vatPercent ? Number(line.vatPercent) : null,
+      vatPercent: line.vatPercent ? Number(line.vatPercent) : existingLine.sheet.vatDefault ? Number(existingLine.sheet.vatDefault) : null,
       supplier: line.supplier,
       link: line.link,
       notes: line.notes,
