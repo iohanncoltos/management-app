@@ -75,12 +75,16 @@ export async function getHomeOverview(userId: string, permissions: string[]): Pr
   const upcomingLimit = endOfDay(addDays(now, 7));
   const calendarLimit = endOfDay(addDays(now, 30));
 
-  const taskScope = canViewAllTasks ? {} : { assigneeId: userId };
+  // Calendar and urgent tasks should always be user-specific
+  const userTaskScope = { assigneeId: userId };
+
+  // Only urgent tasks list respects "view all" permission
+  const urgentTaskScope = canViewAllTasks ? {} : { assigneeId: userId };
 
   const [rawUrgentTasks, calendarTasks, projectSummaries] = await Promise.all([
     prisma.task.findMany({
       where: {
-        ...taskScope,
+        ...urgentTaskScope,
         status: { not: TaskStatus.COMPLETED },
         end: { lte: upcomingLimit },
       },
@@ -92,7 +96,7 @@ export async function getHomeOverview(userId: string, permissions: string[]): Pr
     }),
     prisma.task.findMany({
       where: {
-        ...taskScope,
+        ...userTaskScope,
         end: { gte: startOfDay(now), lte: calendarLimit },
       },
       select: { end: true },
