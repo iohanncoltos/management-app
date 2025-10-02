@@ -78,13 +78,10 @@ export async function getHomeOverview(userId: string, permissions: string[]): Pr
   // Calendar and urgent tasks should always be user-specific
   const userTaskScope = { assigneeId: userId };
 
-  // Only urgent tasks list respects "view all" permission
-  const urgentTaskScope = canViewAllTasks ? {} : { assigneeId: userId };
-
   const [rawUrgentTasks, calendarTasks, projectSummaries] = await Promise.all([
     prisma.task.findMany({
       where: {
-        ...urgentTaskScope,
+        ...userTaskScope,
         status: { not: TaskStatus.COMPLETED },
         end: { lte: upcomingLimit },
       },
