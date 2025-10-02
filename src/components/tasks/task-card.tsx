@@ -9,9 +9,9 @@ import {
   Building,
   AlertTriangle,
   Eye,
-  Edit,
   MoreHorizontal,
   Loader2,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,10 +31,8 @@ import {
   TaskStatus,
   TASK_STATUS_LABELS,
   TASK_PRIORITY_LABELS,
-  TASK_CATEGORY_LABELS,
   PRIORITY_COLORS,
   STATUS_COLORS,
-  CATEGORY_COLORS,
 } from "@/lib/types/tasks";
 
 interface TaskCardProps {
@@ -62,7 +60,6 @@ export function TaskCard({
   const getPriorityIcon = () => {
     switch (task.priority) {
       case "CRITICAL":
-        return <AlertTriangle className="h-4 w-4" />;
       case "HIGH":
         return <AlertTriangle className="h-4 w-4" />;
       default:
@@ -92,58 +89,36 @@ export function TaskCard({
     }
   };
 
-  const cardBorderClass = isOverdue
-    ? "border-red-500 bg-red-50 dark:bg-red-950/50 dark:border-red-400"
-    : isDueSoon
-    ? "border-orange-500 bg-orange-50 dark:bg-orange-950/50 dark:border-orange-400"
-    : task.priority === "CRITICAL"
-    ? "border-red-300 bg-red-25 dark:bg-red-950/30 dark:border-red-500"
-    : task.priority === "HIGH"
-    ? "border-orange-300 bg-orange-25 dark:bg-orange-950/30 dark:border-orange-500"
-    : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700";
-
   return (
-    <Card className={`transition-all hover:shadow-md ${cardBorderClass} ${className}`}>
-      <CardHeader className="pb-3">
+    <Card className={`transition-all hover:shadow-lg border ${className}`}>
+      {/* Header with icon, title, and menu */}
+      <CardHeader className="pb-4">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              <div className={`p-1 rounded ${task.priority === "CRITICAL" || task.priority === "HIGH" ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"}`}>
-                {getPriorityIcon()}
-              </div>
-              <h3 className="font-semibold text-lg leading-tight truncate text-foreground">{task.title}</h3>
-              {isOverdue && (
-                <Badge variant="danger" className="text-xs shrink-0">
-                  Overdue
-                </Badge>
-              )}
-              {isDueSoon && !isOverdue && (
-                <Badge variant="warning" className="text-xs shrink-0">
-                  Due Soon
-                </Badge>
-              )}
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <div className={`p-2 rounded-lg shrink-0 ${
+              task.priority === "CRITICAL" || task.priority === "HIGH"
+                ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                : "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+            }`}>
+              {getPriorityIcon()}
             </div>
-
-            <div className="flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-1">
-                <Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                <span className={isOverdue ? "text-red-600 font-semibold" : "text-gray-700 dark:text-gray-300 font-medium"}>
-                  Due {format(new Date(task.end), "MMM dd, yyyy")}
-                </span>
-              </div>
-
-              {task.estimatedHours && (
-                <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">{task.estimatedHours}h est.</span>
-                </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-lg leading-tight text-foreground">
+                {task.title}
+              </h3>
+              {(isOverdue || isDueSoon) && (
+                <Badge
+                  variant={isOverdue ? "danger" : "warning"}
+                  className="mt-1 text-xs"
+                >
+                  {isOverdue ? "Overdue" : "Due Soon"}
+                </Badge>
               )}
             </div>
           </div>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -153,7 +128,7 @@ export function TaskCard({
                 View Details
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onEditProgress?.(task)}>
-                <Edit className="mr-2 h-4 w-4" />
+                <Clock className="mr-2 h-4 w-4" />
                 Update Progress
               </DropdownMenuItem>
               {task.status !== TaskStatus.COMPLETED && (
@@ -172,90 +147,95 @@ export function TaskCard({
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* Description */}
         {task.description && (
-          <div className="bg-background/80 dark:bg-muted/40 p-3 rounded-lg border border-border shadow-sm">
-            <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground font-medium">{task.description}</p>
-          </div>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {task.description}
+          </p>
         )}
 
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Badge className={PRIORITY_COLORS[task.priority]} variant="outline">
-                {TASK_PRIORITY_LABELS[task.priority]}
-              </Badge>
-              <Badge className={CATEGORY_COLORS[task.category]} variant="outline">
-                {TASK_CATEGORY_LABELS[task.category]}
-              </Badge>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Badge className={STATUS_COLORS[task.status]} variant="outline">
-                {TASK_STATUS_LABELS[task.status]}
-              </Badge>
-            </div>
+        {/* Date and Time Row */}
+        <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span className={isOverdue ? "text-red-600 font-medium dark:text-red-400" : "text-foreground"}>
+              {format(new Date(task.end), "MMM dd, yyyy")}
+            </span>
           </div>
 
-          <div className="space-y-2">
+          {task.estimatedHours && (
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-foreground">{task.estimatedHours}h est.</span>
+            </div>
+          )}
+        </div>
+
+        {/* Badges and Assignees Row */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge className={PRIORITY_COLORS[task.priority]} variant="outline">
+              {TASK_PRIORITY_LABELS[task.priority]}
+            </Badge>
+            <Badge className={STATUS_COLORS[task.status]} variant="outline">
+              {TASK_STATUS_LABELS[task.status]}
+            </Badge>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
             {task.assignee && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <Avatar className="h-6 w-6">
-                  <AvatarFallback className="text-xs">
+                  <AvatarFallback className="text-xs bg-primary/10 text-primary">
                     {task.assignee.name?.split(' ').map(n => n[0]).join('') ?? 'U'}
                   </AvatarFallback>
                 </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold truncate text-gray-900 dark:text-gray-100">{task.assignee.name}</p>
-                  {task.assignee.role?.name && (
-                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{task.assignee.role.name}</p>
-                  )}
-                </div>
+                <User className="h-3 w-3 text-muted-foreground" />
               </div>
             )}
-
             {task.project && (
-              <div className="flex items-center gap-2">
-                <Building className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold truncate text-gray-900 dark:text-gray-100">{task.project.code}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{task.project.name}</p>
-                </div>
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-md">
+                <Building className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs font-medium text-foreground">
+                  {task.project.code || task.project.name}
+                </span>
               </div>
             )}
           </div>
         </div>
 
+        {/* Progress Bar */}
         <div className="space-y-2">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-700 dark:text-gray-300 font-medium">Progress</span>
-            <span className="font-bold text-gray-900 dark:text-gray-100">{task.progress}%</span>
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-muted-foreground">Progress</span>
+            <span className="text-sm font-bold text-foreground">{task.progress}%</span>
           </div>
-          <Progress value={task.progress} className="h-3" />
+          <Progress value={task.progress} className="h-2.5" />
         </div>
 
-        <div className="flex gap-2">
+        {/* Action Buttons */}
+        <div className="flex gap-2 pt-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => onViewDetails?.(task)}
-            className="flex-1"
+            className="flex-1 h-8 text-xs px-2"
           >
-            <Eye className="mr-2 h-4 w-4" />
+            <Eye className="mr-1.5 h-3.5 w-3.5" />
             View Details
           </Button>
 
           {task.status !== TaskStatus.COMPLETED && (
             <Button
-              variant="default"
               size="sm"
               onClick={markComplete}
               disabled={isLoading}
-              className="flex-1"
+              className="flex-1 h-8 text-xs px-2"
             >
               {isLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               ) : (
-                <CheckCircle className="mr-2 h-4 w-4" />
+                <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
               )}
               Complete
             </Button>

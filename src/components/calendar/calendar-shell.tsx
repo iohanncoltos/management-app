@@ -1,13 +1,17 @@
 "use client";
 
 import { eachDayOfInterval, format, isSameDay, parseISO } from "date-fns";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, useCallback } from "react";
 import Link from "next/link";
 import { CalendarIcon, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { CalendarTask, CalendarRange } from "@/lib/services/calendar-service";
 
 const PRIORITY_CLASSES: Record<string, string> = {
@@ -35,6 +39,11 @@ export function CalendarShell({ initialRange, initialTasks }: CalendarShellProps
   const [tasks, setTasks] = useState<CalendarTask[]>(initialTasks);
   const [view, setView] = useState<CalendarView>(initialRange.view);
   const [isPending, startTransition] = useTransition();
+  const [draggedTask, setDraggedTask] = useState<CalendarTask | null>(null);
+  const [resizing, setResizing] = useState<{ taskId: string; initialY: number; initialEnd: Date; edge: "top" | "bottom" } | null>(null);
+  const [editingTask, setEditingTask] = useState<CalendarTask | null>(null);
+  const [editStartTime, setEditStartTime] = useState("");
+  const [editEndTime, setEditEndTime] = useState("");
 
   useEffect(() => {
     setView(initialRange.view);
@@ -69,6 +78,212 @@ export function CalendarShell({ initialRange, initialTasks }: CalendarShellProps
     handleNavigate(isoDate, "day");
   };
 
+  const updateTaskTime = useCallback(
+    async (taskId: string, newStart: Date, newEnd: Date) => {
+      try {
+        const res = await fetch(`/api/tasks/${taskId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            start: newStart.toISOString(),
+            end: newEnd.toISOString(),
+          }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to update task");
+        }
+
+        const updatedTask = await res.json();
+
+        // Update local state
+        setTasks((prevTasks) =>
+          prevTasks.map((task) =>
+            task.id === taskId
+              ? {
+                  ...task,
+                  start: updatedTask.start,
+                  end: updatedTask.end,
+                }
+              : task
+          )
+        );
+
+        toast.success("Task updated successfully");
+      } catch (error) {
+        console.error("Failed to update task:", error);
+        toast.error("Failed to update task");
+      }
+    },
+    []
+  );
+
+  const handleTaskClick = useCallback((task: CalendarTask) => {
+    const startDate = new Date(task.start);
+    const endDate = new Date(task.end);
+    setEditingTask(task);
+    setEditStartTime(format(startDate, "HH:mm"));
+    setEditEndTime(format(endDate, "HH:mm"));
+  }, []);
+
+  const handleSaveTimeEdit = useCallback(() => {
+    if (!editingTask) return;
+
+    const startDate = new Date(editingTask.start);
+    const endDate = new Date(editingTask.end);
+
+    const [startHour, startMinute] = editStartTime.split(":").map(Number);
+    const [endHour, endMinute] = editEndTime.split(":").map(Number);
+
+    if (
+      startHour === undefined ||
+      startMinute === undefined ||
+      endHour === undefined ||
+      endMinute === undefined
+    ) {
+      toast.error("Invalid time format");
+      return;
+    }
+
+    const newStart = new Date(startDate);
+    newStart.setHours(startHour, startMinute, 0, 0);
+
+    const newEnd = new Date(endDate);
+    newEnd.setHours(endHour, endMinute, 0, 0);
+
+    if (newEnd <= newStart) {
+      toast.error("End time must be after start time");
+      return;
+    }
+
+    const durationMs = newEnd.getTime() - newStart.getTime();
+    const durationMinutes = durationMs / (60 * 1000);
+
+    if (durationMinutes < 15) {
+      toast.error(`Task duration must be at least 15 minutes (current: ${Math.round(durationMinutes)} minutes)`);
+      return;
+    }
+
+    updateTaskTime(editingTask.id, newStart, newEnd);
+    setEditingTask(null);
+  }, [editingTask, editStartTime, editEndTime, updateTaskTime]);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent, targetDate: Date) => {
+      e.preventDefault();
+      if (!draggedTask) return;
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const containerHeight = rect.height;
+      const percentage = y / containerHeight;
+
+      const dayStart = 9 * 60;
+      const dayEnd = 21 * 60;
+      const totalMinutes = dayEnd - dayStart;
+      const minutesFromStart = Math.round(percentage * totalMinutes);
+      const newStartMinutes = dayStart + minutesFromStart;
+
+      const taskStart = new Date(draggedTask.start);
+      const taskEnd = new Date(draggedTask.end);
+      const durationMs = taskEnd.getTime() - taskStart.getTime();
+
+      const newStart = new Date(targetDate);
+      newStart.setHours(Math.floor(newStartMinutes / 60), newStartMinutes % 60, 0, 0);
+
+      const newEnd = new Date(newStart.getTime() + durationMs);
+
+      updateTaskTime(draggedTask.id, newStart, newEnd);
+      setDraggedTask(null);
+    },
+    [draggedTask, updateTaskTime]
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent, task: CalendarTask, edge: "top" | "bottom") => {
+    e.stopPropagation();
+    e.preventDefault();
+    setResizing({
+      taskId: task.id,
+      initialY: e.clientY,
+      initialEnd: new Date(task.end),
+      edge,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!resizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const task = tasks.find((t) => t.id === resizing.taskId);
+      if (!task) return;
+
+      const deltaY = e.clientY - resizing.initialY;
+      const dayStart = 9 * 60;
+      const dayEnd = 21 * 60;
+      const totalMinutes = dayEnd - dayStart;
+      const minutesPerPixel = totalMinutes / 768; // 768px is the container height
+      const deltaMinutes = Math.round(deltaY * minutesPerPixel);
+
+      if (resizing.edge === "bottom") {
+        // Resizing bottom edge - change end time
+        const newEnd = new Date(resizing.initialEnd.getTime() + deltaMinutes * 60 * 1000);
+        const taskStart = new Date(task.start);
+
+        // Ensure minimum duration of 15 minutes
+        if (newEnd.getTime() - taskStart.getTime() < 15 * 60 * 1000) {
+          return;
+        }
+
+        // Update optimistically
+        setTasks((prevTasks) =>
+          prevTasks.map((t) =>
+            t.id === resizing.taskId ? { ...t, end: newEnd.toISOString() } : t
+          )
+        );
+      } else {
+        // Resizing top edge - change start time
+        const initialStart = new Date(task.start);
+        const newStart = new Date(initialStart.getTime() + deltaMinutes * 60 * 1000);
+        const taskEnd = new Date(task.end);
+
+        // Ensure minimum duration of 15 minutes
+        if (taskEnd.getTime() - newStart.getTime() < 15 * 60 * 1000) {
+          return;
+        }
+
+        // Update optimistically
+        setTasks((prevTasks) =>
+          prevTasks.map((t) =>
+            t.id === resizing.taskId ? { ...t, start: newStart.toISOString() } : t
+          )
+        );
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (!resizing) return;
+
+      const task = tasks.find((t) => t.id === resizing.taskId);
+      if (task) {
+        updateTaskTime(task.id, new Date(task.start), new Date(task.end));
+      }
+      setResizing(null);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [resizing, tasks, updateTaskTime]);
+
   const dayTasksMap = useMemo(() => {
     const map = new Map<string, CalendarTask[]>();
     tasks.forEach((task) => {
@@ -100,15 +315,15 @@ export function CalendarShell({ initialRange, initialTasks }: CalendarShellProps
   }, [range.rangeStart, range.rangeEnd, view]);
 
   const HOURS = useMemo(() => {
-    const startHour = 6;
-    const endHour = 20;
+    const startHour = 9;
+    const endHour = 21;
     return Array.from({ length: endHour - startHour + 1 }, (_, index) => startHour + index);
   }, []);
 
   // Calculate task layout with column positioning for overlapping tasks
   const calculateTaskLayout = (tasks: CalendarTask[]) => {
-    const dayStart = 6 * 60;
-    const dayEnd = 20 * 60;
+    const dayStart = 9 * 60;
+    const dayEnd = 21 * 60;
 
     const tasksWithTimes = tasks.map((task) => {
       const start = new Date(task.start);
@@ -188,15 +403,18 @@ export function CalendarShell({ initialRange, initialTasks }: CalendarShellProps
     return taskLayout;
   };
 
-  const renderTaskBlock = (layout: {
-    task: CalendarTask;
-    column: number;
-    totalColumns: number;
-    top: number;
-    height: number;
-    start: Date;
-    end: Date;
-  }) => {
+  const renderTaskBlock = (
+    layout: {
+      task: CalendarTask;
+      column: number;
+      totalColumns: number;
+      top: number;
+      height: number;
+      start: Date;
+      end: Date;
+    },
+    dayKey?: string
+  ) => {
     const { task, column, totalColumns, top, height, start, end } = layout;
 
     const columnWidth = 100 / totalColumns;
@@ -214,20 +432,57 @@ export function CalendarShell({ initialRange, initialTasks }: CalendarShellProps
     const shouldTruncate = totalColumns > 1 || task.title.length > 30;
     const displayTitle = shouldTruncate && task.title.length > 25 ? `${task.title.slice(0, 25)}...` : task.title;
 
+    const handleDragStart = (e: React.DragEvent) => {
+      setDraggedTask(task);
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("taskId", task.id);
+      if (dayKey) {
+        e.dataTransfer.setData("dayKey", dayKey);
+      }
+    };
+
+    const handleDragEnd = () => {
+      setDraggedTask(null);
+    };
+
+    const handleClick = (e: React.MouseEvent) => {
+      // Only trigger if not clicking on resize handle
+      if ((e.target as HTMLElement).closest('[data-resize-handle]')) {
+        return;
+      }
+      handleTaskClick(task);
+    };
+
     return (
       <div
         key={task.id}
+        draggable
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onClick={handleClick}
         style={style}
         title={task.title} // Tooltip shows full title
-        className={`absolute rounded-lg border px-2 py-1.5 text-xs shadow-sm transition hover:z-10 hover:shadow-md ${
-          PRIORITY_CLASSES[task.priority] ?? "bg-secondary/60 text-foreground border-transparent"
-        }`}
+        className={`absolute rounded-lg border px-2 py-1.5 text-xs shadow-sm transition hover:z-10 hover:shadow-md cursor-pointer ${
+          draggedTask?.id === task.id ? "opacity-50" : ""
+        } ${PRIORITY_CLASSES[task.priority] ?? "bg-secondary/60 text-foreground border-transparent"}`}
       >
+        {/* Resize handle at top */}
+        <div
+          data-resize-handle
+          className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-primary/30 transition-colors"
+          onMouseDown={(e) => handleResizeStart(e, task, "top")}
+        />
         <p className="font-medium leading-tight truncate">{displayTitle}</p>
         <p className="text-[10px] text-muted-foreground truncate">
           {format(start, "HH:mm")} – {format(end, "HH:mm")}
           {task.project ? ` · ${task.project.code ?? task.project.name}` : ""}
         </p>
+        {/* Resize handle at bottom */}
+        <div
+          data-resize-handle
+          className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-primary/30 transition-colors"
+          onMouseDown={(e) => handleResizeStart(e, task, "bottom")}
+        />
       </div>
     );
   };
@@ -291,7 +546,11 @@ export function CalendarShell({ initialRange, initialTasks }: CalendarShellProps
                     <div key={hour} className="border-b border-border/40" style={{ height: `${100 / (HOURS.length - 1)}%` }} />
                   ))}
                 </div>
-                <div className="relative h-full">
+                <div
+                  className="relative h-full"
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, new Date(range.date))}
+                >
                   {calculateTaskLayout(dayTasksMap.get(format(new Date(range.date), "yyyy-MM-dd")) ?? []).map((layout) =>
                     renderTaskBlock(layout)
                   )}
@@ -339,8 +598,12 @@ export function CalendarShell({ initialRange, initialTasks }: CalendarShellProps
                             />
                           ))}
                         </div>
-                        <div className="relative h-full">
-                          {calculateTaskLayout(dayTasks).map((layout) => renderTaskBlock(layout))}
+                        <div
+                          className="relative h-full"
+                          onDragOver={handleDragOver}
+                          onDrop={(e) => handleDrop(e, day)}
+                        >
+                          {calculateTaskLayout(dayTasks).map((layout) => renderTaskBlock(layout, iso))}
                         </div>
                       </div>
                     );
@@ -399,6 +662,49 @@ export function CalendarShell({ initialRange, initialTasks }: CalendarShellProps
           <Link href="/tasks">Open task board</Link>
         </Button>
       </div>
+
+      <Dialog open={!!editingTask} onOpenChange={(open) => !open && setEditingTask(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Task Time</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="task-name">Task</Label>
+              <p className="text-sm font-medium">{editingTask?.title}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="start-time">Start Time</Label>
+                <Input
+                  id="start-time"
+                  type="time"
+                  value={editStartTime}
+                  onChange={(e) => setEditStartTime(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end-time">End Time</Label>
+                <Input
+                  id="end-time"
+                  type="time"
+                  value={editEndTime}
+                  onChange={(e) => setEditEndTime(e.target.value)}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Minimum task duration: 15 minutes
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingTask(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveTimeEdit}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

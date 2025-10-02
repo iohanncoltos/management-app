@@ -4,6 +4,7 @@ import { TaskStatus } from "@prisma/client";
 import { AuthorizationError, requireSession } from "@/lib/authz";
 import { deleteTask, updateTask, getTaskById } from "@/lib/services/task-service";
 import { taskUpdateSchema } from "@/lib/validation/task";
+import { logTaskUpdate } from "@/lib/services/task-notification-service";
 
 type RouteContext = { params: Promise<{ taskId: string }> };
 
@@ -89,14 +90,26 @@ export async function PATCH(request: Request, context: RouteContext) {
         actualHours: updates.actualHours,
       };
 
-      // Auto-set status based on progress if not explicitly set
-      if (updates.progress === 100 && !updates.status) {
+      // Auto-set status based on progress if status hasn't changed
+      const statusUnchanged = !updates.status || updates.status === existing.status;
+
+      if (updates.progress === 100 && statusUnchanged) {
         allowedUpdates.status = TaskStatus.COMPLETED;
-      } else if (updates.progress && updates.progress > 0 && !updates.status && existing.status === TaskStatus.NOT_STARTED) {
+      } else if (updates.progress !== undefined && updates.progress > 0 && statusUnchanged && existing.status === TaskStatus.NOT_STARTED) {
         allowedUpdates.status = TaskStatus.IN_PROGRESS;
       }
 
       const task = await updateTask(taskId, allowedUpdates);
+
+      // Log update and send notifications
+      await logTaskUpdate({
+        taskId,
+        updatedById: session.user.id,
+        oldProgress: existing.progress,
+        newProgress: allowedUpdates.progress,
+        oldStatus: existing.status,
+        newStatus: allowedUpdates.status,
+      });
 
       // Serialize dates for JSON response
       const serializedTask = {
@@ -111,10 +124,30 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     // For users who can manage tasks, allow all updates
+    // Auto-set status based on progress if status hasn't changed
+    const finalUpdates = { ...updates };
+    const statusUnchanged = !updates.status || updates.status === existing.status;
+
+    if (updates.progress === 100 && statusUnchanged) {
+      finalUpdates.status = TaskStatus.COMPLETED;
+    } else if (updates.progress !== undefined && updates.progress > 0 && statusUnchanged && existing.status === TaskStatus.NOT_STARTED) {
+      finalUpdates.status = TaskStatus.IN_PROGRESS;
+    }
+
     const task = await updateTask(taskId, {
-      ...updates,
-      start: updates.start ? new Date(updates.start) : undefined,
-      end: updates.end ? new Date(updates.end) : undefined,
+      ...finalUpdates,
+      start: finalUpdates.start ? new Date(finalUpdates.start) : undefined,
+      end: finalUpdates.end ? new Date(finalUpdates.end) : undefined,
+    });
+
+    // Log update and send notifications
+    await logTaskUpdate({
+      taskId,
+      updatedById: session.user.id,
+      oldProgress: existing.progress,
+      newProgress: finalUpdates.progress,
+      oldStatus: existing.status,
+      newStatus: finalUpdates.status,
     });
 
     // Serialize dates for JSON response
