@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { BudgetCategory, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { recordAuditEvent } from "@/lib/audit";
-import { AuthorizationError, requireProjectBudgetEdit } from "@/lib/authz";
+import { AuthorizationError, requireProjectBudgetEdit, requireWorkspaceBudgetEdit } from "@/lib/authz";
 import { categorizeBudgetItem } from "@/lib/budgetCategorizer";
 import { prisma } from "@/lib/db";
 
@@ -16,7 +16,7 @@ const updateLineSchema = z.object({
   supplier: z.string().max(100).optional(),
   link: z.string().url().optional(),
   notes: z.string().max(500).optional(),
-  category: z.nativeEnum(BudgetCategory).optional(),
+  category: z.string().min(1).max(100).optional(),
 });
 
 function handleAuthError(error: unknown) {
@@ -49,7 +49,7 @@ export async function PATCH(
       where: { id },
       include: {
         sheet: {
-          select: { projectId: true, vatDefault: true },
+          select: { projectId: true, workspaceId: true, vatDefault: true },
         },
       },
     });
@@ -58,7 +58,14 @@ export async function PATCH(
       return NextResponse.json({ message: "Budget line not found" }, { status: 404 });
     }
 
-    const session = await requireProjectBudgetEdit(existingLine.sheet.projectId);
+    let session;
+    if (existingLine.sheet.projectId) {
+      session = await requireProjectBudgetEdit(existingLine.sheet.projectId);
+    } else if (existingLine.sheet.workspaceId) {
+      session = await requireWorkspaceBudgetEdit(existingLine.sheet.workspaceId);
+    } else {
+      throw new AuthorizationError("Budget sheet is not associated with a project or workspace", 400);
+    }
 
     // Auto-categorize if name/unit changed but category not explicitly set
     let finalCategory = data.category;
@@ -94,7 +101,13 @@ export async function PATCH(
       entity: "budget_line",
       entityId: line.id,
       userId: session.user.id,
-      data: { action: "update", projectId: existingLine.sheet.projectId, lineId: line.id, changes: data },
+      data: {
+        action: "update",
+        projectId: existingLine.sheet.projectId ?? undefined,
+        workspaceId: existingLine.sheet.workspaceId ?? undefined,
+        lineId: line.id,
+        changes: data,
+      },
     });
 
     const serializedLine = {
@@ -105,7 +118,11 @@ export async function PATCH(
       unit: line.unit,
       unitPrice: Number(line.unitPrice),
       currency: line.currency,
-      vatPercent: line.vatPercent ? Number(line.vatPercent) : existingLine.sheet.vatDefault ? Number(existingLine.sheet.vatDefault) : null,
+      vatPercent: line.vatPercent
+        ? Number(line.vatPercent)
+        : existingLine.sheet.vatDefault
+          ? Number(existingLine.sheet.vatDefault)
+          : null,
       supplier: line.supplier,
       link: line.link,
       notes: line.notes,
@@ -137,7 +154,7 @@ export async function DELETE(
       where: { id },
       include: {
         sheet: {
-          select: { projectId: true },
+          select: { projectId: true, workspaceId: true },
         },
       },
     });
@@ -146,7 +163,14 @@ export async function DELETE(
       return NextResponse.json({ message: "Budget line not found" }, { status: 404 });
     }
 
-    const session = await requireProjectBudgetEdit(existingLine.sheet.projectId);
+    let session;
+    if (existingLine.sheet.projectId) {
+      session = await requireProjectBudgetEdit(existingLine.sheet.projectId);
+    } else if (existingLine.sheet.workspaceId) {
+      session = await requireWorkspaceBudgetEdit(existingLine.sheet.workspaceId);
+    } else {
+      throw new AuthorizationError("Budget sheet is not associated with a project or workspace", 400);
+    }
 
     await prisma.budgetLine.delete({
       where: { id },
@@ -160,9 +184,10 @@ export async function DELETE(
       userId: session.user.id,
       data: {
         action: "delete",
-        projectId: existingLine.sheet.projectId,
+        projectId: existingLine.sheet.projectId ?? undefined,
+        workspaceId: existingLine.sheet.workspaceId ?? undefined,
         lineId: id,
-        name: existingLine.name
+        name: existingLine.name,
       },
     });
 

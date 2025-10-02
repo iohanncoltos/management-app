@@ -36,7 +36,6 @@ import {
 const addLineSchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
   quantity: z.number().positive("Quantity must be positive"),
-  unit: z.string().max(50).optional(),
   unitPrice: z.number().min(0, "Unit price must be non-negative"),
   currency: z.string().length(3).optional(),
   supplier: z.string().max(100).optional(),
@@ -62,7 +61,6 @@ interface BudgetLine {
   name: string;
   category: string;
   quantity: number;
-  unit: string | null;
   unitPrice: number;
   currency: string;
   vatPercent: number | null;
@@ -75,14 +73,19 @@ interface BudgetLine {
   createdBy: string;
 }
 
+interface BudgetContext {
+  queryKey: "projectId" | "workspaceId";
+  targetId: string;
+}
+
 interface AddLineDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  projectId: string;
+  context: BudgetContext;
   onLineAdded: (line: BudgetLine) => void;
 }
 
-export function AddLineDialog({ isOpen, onClose, projectId, onLineAdded }: AddLineDialogProps) {
+export function AddLineDialog({ isOpen, onClose, context, onLineAdded }: AddLineDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCustomCategory, setShowCustomCategory] = useState(false);
 
@@ -91,7 +94,6 @@ export function AddLineDialog({ isOpen, onClose, projectId, onLineAdded }: AddLi
     defaultValues: {
       name: "",
       quantity: 1,
-      unit: "",
       unitPrice: 0,
       currency: "EUR",
       supplier: "",
@@ -108,10 +110,9 @@ export function AddLineDialog({ isOpen, onClose, projectId, onLineAdded }: AddLi
       const finalCategory = data.category === "CUSTOM" ? data.customCategory : data.category;
       const payload = {
         ...data,
-        projectId,
+        [context.queryKey]: context.targetId,
         category: finalCategory,
         // Clean up empty strings
-        unit: data.unit || undefined,
         supplier: data.supplier || undefined,
         link: data.link || undefined,
         notes: data.notes || undefined,
@@ -205,20 +206,6 @@ export function AddLineDialog({ isOpen, onClose, projectId, onLineAdded }: AddLi
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="unit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unit</FormLabel>
-                    <FormControl>
-                      <Input placeholder="pcs, kg, m, AWG..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -31,7 +31,7 @@ interface BudgetLine {
   name: string;
   category: string;
   quantity: number;
-  unit: string | null;
+  unit?: string | null;
   unitPrice: number;
   currency: string;
   vatPercent: number | null;

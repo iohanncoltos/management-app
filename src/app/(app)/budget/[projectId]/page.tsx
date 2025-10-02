@@ -53,8 +53,16 @@ export default async function BudgetWorkspacePage({ params }: BudgetWorkspacePag
 
   return (
     <BudgetWorkspace
-      project={project}
       canEdit={canEdit}
+      context={{
+        type: "project",
+        project: {
+          id: project.id,
+          name: project.name,
+          code: project.code,
+          status: project.status,
+        },
+      }}
     />
   );
 }

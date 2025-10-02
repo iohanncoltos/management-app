@@ -2,21 +2,44 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { recordAuditEvent } from "@/lib/audit";
-import { AuthorizationError, requireProjectView, requireProjectBudgetEdit } from "@/lib/authz";
+import {
+  AuthorizationError,
+  requireProjectBudgetEdit,
+  requireProjectView,
+  requireWorkspaceBudgetEdit,
+  requireWorkspaceView,
+} from "@/lib/authz";
 import { prisma } from "@/lib/db";
 
-const createLineSchema = z.object({
-  projectId: z.string().cuid(),
-  name: z.string().min(1).max(200),
-  quantity: z.number().positive(),
-  unit: z.string().max(50).optional(),
-  unitPrice: z.number().min(0),
-  currency: z.string().length(3).optional().default("EUR"),
-  supplier: z.string().max(100).optional(),
-  link: z.string().url().optional(),
-  notes: z.string().max(500).optional(),
-  category: z.string().min(1).max(100),
-});
+const createLineSchema = z
+  .object({
+    projectId: z.string().cuid().optional(),
+    workspaceId: z.string().cuid().optional(),
+    name: z.string().min(1, "Name is required").max(200),
+    quantity: z.number().positive("Quantity must be positive"),
+    unit: z.string().max(50).optional(),
+    unitPrice: z.number().min(0, "Unit price must be non-negative"),
+    currency: z.string().length(3).optional(),
+    supplier: z.string().max(100).optional(),
+    link: z.string().url().optional(),
+    notes: z.string().max(500).optional(),
+    category: z.string().min(1, "Category is required").max(100),
+  })
+  .superRefine((data, ctx) => {
+    const hasProject = Boolean(data.projectId);
+    const hasWorkspace = Boolean(data.workspaceId);
+    if (hasProject === hasWorkspace) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide either projectId or workspaceId",
+        path: ["projectId"],
+      });
+    }
+  })
+  .transform((data) => ({
+    ...data,
+    currency: data.currency ?? "EUR",
+  }));
 
 function handleAuthError(error: unknown) {
   if (error instanceof AuthorizationError) {
@@ -25,25 +48,39 @@ function handleAuthError(error: unknown) {
   return null;
 }
 
+function ensureSingleContext(projectId: string | null, workspaceId: string | null) {
+  const hasProject = Boolean(projectId);
+  const hasWorkspace = Boolean(workspaceId);
+  if (hasProject === hasWorkspace) {
+    throw new AuthorizationError("Provide either projectId or workspaceId", 400);
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get("projectId");
+    const workspaceId = searchParams.get("workspaceId");
     const category = searchParams.get("category");
     const search = searchParams.get("search");
     const supplier = searchParams.get("supplier");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "50", 10);
 
-    if (!projectId) {
-      return NextResponse.json({ message: "projectId is required" }, { status: 400 });
+    ensureSingleContext(projectId, workspaceId);
+
+    if (projectId) {
+      await requireProjectView(projectId);
     }
 
-    await requireProjectView(projectId);
+    if (workspaceId) {
+      await requireWorkspaceView(workspaceId);
+    }
 
-    // Get budget sheet
+    const whereClause = projectId ? { projectId } : { workspaceId: workspaceId! };
+
     const sheet = await prisma.budgetSheet.findUnique({
-      where: { projectId },
+      where: whereClause,
     });
 
     if (!sheet) {
@@ -51,10 +88,11 @@ export async function GET(request: Request) {
         lines: [],
         totalCount: 0,
         hasMore: false,
+        page,
+        limit,
       });
     }
 
-    // Build where clause
     const where: Record<string, unknown> = {
       sheetId: sheet.id,
     };
@@ -75,10 +113,8 @@ export async function GET(request: Request) {
       where.supplier = { contains: supplier, mode: "insensitive" };
     }
 
-    // Get total count
     const totalCount = await prisma.budgetLine.count({ where });
 
-    // Get paginated lines
     const lines = await prisma.budgetLine.findMany({
       where,
       include: {
@@ -129,31 +165,30 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await requireProjectBudgetEdit("");
     const body = await request.json();
     const parsed = createLineSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
         { message: "Invalid payload", issues: parsed.error.issues },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const { projectId, ...data } = parsed.data;
+    const { projectId, workspaceId, ...data } = parsed.data;
 
-    // Verify project permissions
-    await requireProjectBudgetEdit(projectId);
+    const sheetWhere = projectId ? { projectId } : { workspaceId: workspaceId! };
 
-    // Get or create budget sheet
-    let sheet = await prisma.budgetSheet.findUnique({
-      where: { projectId },
-    });
+    const session = projectId
+      ? await requireProjectBudgetEdit(projectId)
+      : await requireWorkspaceBudgetEdit(workspaceId!);
+
+    let sheet = await prisma.budgetSheet.findUnique({ where: sheetWhere });
 
     if (!sheet) {
       sheet = await prisma.budgetSheet.create({
         data: {
-          projectId,
+          ...sheetWhere,
           createdById: session.user.id,
         },
       });
@@ -173,13 +208,18 @@ export async function POST(request: Request) {
       },
     });
 
-    // Record audit event
     await recordAuditEvent({
       type: "BUDGET",
       entity: "budget_line",
       entityId: line.id,
       userId: session.user.id,
-      data: { action: "create", projectId, lineId: line.id, name: line.name },
+      data: {
+        action: "create",
+        projectId: projectId ?? undefined,
+        workspaceId: workspaceId ?? undefined,
+        lineId: line.id,
+        name: line.name,
+      },
     });
 
     const serializedLine = {

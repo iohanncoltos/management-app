@@ -1,26 +1,37 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Download, Upload, BookOpen } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { DoughnutChart } from "@/components/charts/doughnut-chart";
 
 import { BudgetTable } from "./budget-table";
 import { BudgetCharts } from "./budget-charts";
 import { BudgetToolbar } from "./budget-toolbar";
 import { AddLineDialog } from "./add-line-dialog";
+import { DoughnutChart } from "@/components/charts/doughnut-chart";
 import { PageHeader } from "@/components/layout/page-header";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
-interface Project {
+interface ProjectSummary {
   id: string;
   name: string;
   code: string;
   status: string;
+}
+
+interface WorkspaceSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  planned: number | null;
+  actual: number | null;
+  owner: { id: string; name: string | null; email: string } | null;
+  project: ProjectSummary | null;
 }
 
 interface BudgetLine {
@@ -28,7 +39,7 @@ interface BudgetLine {
   name: string;
   category: string;
   quantity: number;
-  unit: string | null;
+  unit?: string | null;
   unitPrice: number;
   currency: string;
   vatPercent: number | null;
@@ -53,12 +64,58 @@ interface BudgetTotals {
   linesCount: number;
 }
 
-interface BudgetWorkspaceProps {
-  project: Project;
-  canEdit: boolean;
+interface BudgetApiResponse {
+  sheet: {
+    id: string;
+    projectId: string | null;
+    workspaceId: string | null;
+    currency: string;
+    vatDefault: number | null;
+  } | null;
+  project: {
+    id?: string;
+    code?: string;
+    name?: string;
+    status?: string;
+    budgetPlanned?: number | null;
+    budgetActual?: number | null;
+  } | null;
+  workspace: {
+    id: string;
+    name: string;
+    description: string | null;
+    planned: number | null;
+    actual: number | null;
+    owner?: {
+      id: string;
+      name: string | null;
+      email: string;
+    } | null;
+    project?: ProjectSummary | null;
+  } | null;
+  totals: BudgetTotals;
 }
 
-export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
+type BudgetWorkspaceProps = {
+  context:
+    | { type: "project"; project: ProjectSummary }
+    | { type: "workspace"; workspace: WorkspaceSummary };
+  canEdit: boolean;
+};
+
+const statusVariants: Record<string, { label: string; variant: "default" | "warning" | "success" | "danger" }> = {
+  PLANNING: { label: "Planning", variant: "default" },
+  ACTIVE: { label: "Active", variant: "success" },
+  ON_HOLD: { label: "On Hold", variant: "warning" },
+  COMPLETED: { label: "Completed", variant: "success" },
+  CLOSED: { label: "Closed", variant: "default" },
+};
+
+export function BudgetWorkspace({ context, canEdit }: BudgetWorkspaceProps) {
+  const router = useRouter();
+  const contextKey = context.type === "project" ? "projectId" : "workspaceId";
+  const targetId = context.type === "project" ? context.project.id : context.workspace.id;
+
   const [lines, setLines] = useState<BudgetLine[]>([]);
   const [totals, setTotals] = useState<BudgetTotals>({
     total: 0,
@@ -75,22 +132,33 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
   const [sheet, setSheet] = useState<BudgetSheetSummary | null>(null);
   const [vatInput, setVatInput] = useState<string>("");
   const [isSavingVat, setIsSavingVat] = useState(false);
-  const [plannedBudget, setPlannedBudget] = useState<number | null>(null);
-  const [plannedInput, setPlannedInput] = useState<string>("");
+  const [plannedBudget, setPlannedBudget] = useState<number | null>(
+    context.type === "workspace" ? context.workspace.planned ?? null : null,
+  );
+  const [plannedInput, setPlannedInput] = useState<string>(
+    context.type === "workspace" && context.workspace.planned !== null
+      ? String(context.workspace.planned)
+      : "",
+  );
   const [isSavingPlanned, setIsSavingPlanned] = useState(false);
-  const [lastSyncedActual, setLastSyncedActual] = useState<number | null>(null);
+  const [lastSyncedActual, setLastSyncedActual] = useState<number | null>(
+    context.type === "workspace" ? context.workspace.actual ?? null : null,
+  );
+
+  const queryString = useMemo(() => `${contextKey}=${targetId}`, [contextKey, targetId]);
 
   const fetchBudgetData = useCallback(async () => {
     setIsLoading(true);
     try {
       const [budgetResponse, linesResponse] = await Promise.all([
-        fetch(`/api/budgets?projectId=${project.id}`),
-        fetch(`/api/budgets/lines?projectId=${project.id}&limit=1000`),
+        fetch(`/api/budgets?${queryString}`),
+        fetch(`/api/budgets/lines?${queryString}&limit=1000`),
       ]);
 
       if (budgetResponse.ok) {
-        const budgetData = await budgetResponse.json();
-        setTotals(budgetData.totals);
+        const budgetData: BudgetApiResponse = await budgetResponse.json();
+        setTotals(budgetData.totals ?? { total: 0, totalsByCategory: {}, linesCount: 0 });
+
         if (budgetData.sheet) {
           const nextSheet: BudgetSheetSummary = {
             id: budgetData.sheet.id,
@@ -101,56 +169,58 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
           setVatInput(
             typeof budgetData.sheet.vatDefault === "number" && !Number.isNaN(budgetData.sheet.vatDefault)
               ? String(budgetData.sheet.vatDefault)
-              : ""
+              : "",
           );
         } else {
           setSheet(null);
           setVatInput("");
         }
 
-        if (budgetData.project) {
-          const planned = budgetData.project.budgetPlanned ?? null;
+        if (context.type === "project") {
+          const planned = budgetData.project?.budgetPlanned ?? null;
           setPlannedBudget(planned);
           setPlannedInput(planned !== null ? String(planned) : "");
-
-          const actual = budgetData.project.budgetActual ?? null;
+          const actual = budgetData.project?.budgetActual ?? null;
           setLastSyncedActual(actual);
         } else {
-          setPlannedBudget(null);
-          setPlannedInput("");
-          setLastSyncedActual(null);
+          const workspace = budgetData.workspace ?? null;
+          const planned = workspace?.planned ?? null;
+          setPlannedBudget(planned);
+          setPlannedInput(planned !== null ? String(planned) : "");
+          const actual = workspace?.actual ?? null;
+          setLastSyncedActual(actual);
         }
       }
 
       if (linesResponse.ok) {
         const linesData = await linesResponse.json();
-        setLines(linesData.lines);
+        setLines(linesData.lines ?? []);
       }
     } catch (error) {
       console.error("Error fetching budget data:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [project.id]);
+  }, [context.type, queryString]);
 
   useEffect(() => {
     fetchBudgetData();
   }, [fetchBudgetData]);
 
   const handleLineAdded = (newLine: BudgetLine) => {
-    setLines(prev => [newLine, ...prev]);
-    fetchBudgetData(); // Refresh totals
+    setLines((prev) => [newLine, ...prev]);
+    fetchBudgetData();
     setShowAddDialog(false);
   };
 
   const handleLineUpdated = (updatedLine: BudgetLine) => {
-    setLines(prev => prev.map(line => line.id === updatedLine.id ? updatedLine : line));
-    fetchBudgetData(); // Refresh totals
+    setLines((prev) => prev.map((line) => (line.id === updatedLine.id ? updatedLine : line)));
+    fetchBudgetData();
   };
 
   const handleLineDeleted = (deletedLineId: string) => {
-    setLines(prev => prev.filter(line => line.id !== deletedLineId));
-    fetchBudgetData(); // Refresh totals
+    setLines((prev) => prev.filter((line) => line.id !== deletedLineId));
+    fetchBudgetData();
   };
 
   const handlePlannedSave = async () => {
@@ -171,21 +241,40 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
 
     setIsSavingPlanned(true);
     try {
-      const response = await fetch(`/api/projects/${project.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ budgetPlanned: parsed ?? 0 }),
-      });
+      if (context.type === "project") {
+        const response = await fetch(`/api/projects/${context.project.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ budgetPlanned: parsed ?? 0 }),
+        });
 
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.message ?? "Unable to update planned budget");
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.message ?? "Unable to update planned budget");
+        }
+
+        const updated = await response.json();
+        const nextPlanned = typeof updated.budgetPlanned === "number" ? updated.budgetPlanned : null;
+        setPlannedBudget(nextPlanned);
+        setPlannedInput(nextPlanned !== null ? String(nextPlanned) : "");
+      } else {
+        const response = await fetch(`/api/budgets/workspaces/${context.workspace.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ planned: parsed }),
+        });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.message ?? "Unable to update planned budget");
+        }
+
+        const updated = await response.json();
+        const nextPlanned = typeof updated.planned === "number" ? updated.planned : null;
+        setPlannedBudget(nextPlanned);
+        setPlannedInput(nextPlanned !== null ? String(nextPlanned) : "");
       }
 
-      const updated = await response.json();
-      const nextPlanned = typeof updated.budgetPlanned === "number" ? updated.budgetPlanned : null;
-      setPlannedBudget(nextPlanned);
-      setPlannedInput(nextPlanned !== null ? String(nextPlanned) : "");
       toast.success("Planned budget updated");
       fetchBudgetData();
     } catch (error) {
@@ -215,7 +304,7 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
       const response = await fetch("/api/budgets", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: project.id, vatPercent: parsed }),
+        body: JSON.stringify({ [contextKey]: targetId, vatPercent: parsed }),
       });
 
       if (!response.ok) {
@@ -226,7 +315,9 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
       const updated: { id: string; vatDefault: number | null; currency: string } = await response.json();
       setSheet(updated);
       setVatInput(
-        typeof updated.vatDefault === "number" && !Number.isNaN(updated.vatDefault) ? String(updated.vatDefault) : ""
+        typeof updated.vatDefault === "number" && !Number.isNaN(updated.vatDefault)
+          ? String(updated.vatDefault)
+          : "",
       );
       toast.success("Default VAT updated");
       await fetchBudgetData();
@@ -252,14 +343,26 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
 
     const syncActual = async () => {
       try {
-        const response = await fetch(`/api/projects/${project.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ budgetActual: actual }),
-        });
+        if (context.type === "project") {
+          const response = await fetch(`/api/projects/${context.project.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ budgetActual: actual }),
+          });
 
-        if (!response.ok) {
-          return;
+          if (!response.ok) {
+            return;
+          }
+        } else {
+          const response = await fetch(`/api/budgets/workspaces/${context.workspace.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ actual }),
+          });
+
+          if (!response.ok) {
+            return;
+          }
         }
 
         if (!cancelled) {
@@ -275,15 +378,16 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
     return () => {
       cancelled = true;
     };
-  }, [totals.total, project.id, canEdit, sheet, lastSyncedActual]);
+  }, [totals.total, context, canEdit, sheet, lastSyncedActual]);
 
-  const filteredLines = lines.filter(line => {
+  const filteredLines = lines.filter((line) => {
     if (filters.category && line.category !== filters.category) return false;
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
-      const matchesSearch = line.name.toLowerCase().includes(searchLower) ||
-                           line.notes?.toLowerCase().includes(searchLower) ||
-                           line.supplier?.toLowerCase().includes(searchLower);
+      const matchesSearch =
+        line.name.toLowerCase().includes(searchLower) ||
+        line.notes?.toLowerCase().includes(searchLower) ||
+        line.supplier?.toLowerCase().includes(searchLower);
       if (!matchesSearch) return false;
     }
     if (filters.supplier && !line.supplier?.toLowerCase().includes(filters.supplier.toLowerCase())) {
@@ -292,15 +396,25 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
     return true;
   });
 
-  const statusVariants: Record<string, { label: string; variant: "default" | "warning" | "success" | "danger" }> = {
-    PLANNING: { label: "Planning", variant: "default" },
-    ACTIVE: { label: "Active", variant: "success" },
-    ON_HOLD: { label: "On Hold", variant: "warning" },
-    COMPLETED: { label: "Completed", variant: "success" },
-    CLOSED: { label: "Closed", variant: "default" },
-  };
+  const headerTitle = context.type === "project" ? context.project.name : context.workspace.name;
+  const headerSubtitle = context.type === "project"
+    ? `${context.project.code} - Budget Management`
+    : context.workspace.description ?? "Custom budget workspace";
 
-  const status = statusVariants[project.status] ?? statusVariants.PLANNING;
+  const status = context.type === "project"
+    ? statusVariants[context.project.status] ?? statusVariants.PLANNING
+    : null;
+
+  const workspaceOwnerLabel =
+    context.type === "workspace"
+      ? context.workspace.owner?.name ?? context.workspace.owner?.email ?? null
+      : null;
+
+  const handleNavigateToProject = () => {
+    if (context.type === "workspace" && context.workspace.project) {
+      router.push(`/budget/${context.workspace.project.id}`);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -310,19 +424,28 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
             <Button variant="ghost" size="sm" asChild>
               <Link href="/budget" className="flex items-center gap-2">
                 <ArrowLeft className="h-4 w-4" />
-                Back to Projects
+                Back to Budgets
               </Link>
             </Button>
             <div className="h-6 w-px bg-border" />
             <div>
-              <h1 className="text-2xl font-bold">{project.name}</h1>
-              <p className="text-muted-foreground">{project.code} - Budget Management</p>
+              <h1 className="text-2xl font-bold">{headerTitle}</h1>
+              <p className="text-muted-foreground">{headerSubtitle}</p>
             </div>
           </div>
         }
         actions={
-          <div className="flex items-center gap-2">
-            <Badge variant={status.variant}>{status.label}</Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            {context.type === "project" && status ? <Badge variant={status.variant}>{status.label}</Badge> : null}
+            {context.type === "workspace" ? <Badge variant="outline">Custom Workspace</Badge> : null}
+            {context.type === "workspace" && context.workspace.project ? (
+              <Button variant="outline" size="sm" onClick={handleNavigateToProject}>
+                View Project Budget
+              </Button>
+            ) : null}
+            {context.type === "workspace" && workspaceOwnerLabel ? (
+              <Badge variant="outline">Owner: {workspaceOwnerLabel}</Badge>
+            ) : null}
             {canEdit && (
               <Button onClick={() => setShowAddDialog(true)} className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
@@ -334,11 +457,10 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
       />
 
       <div className="grid gap-6 lg:grid-cols-12">
-        {/* Main Budget Table */}
-        <div className="lg:col-span-9 space-y-6">
+        <div className="space-y-6 lg:col-span-9">
           <BudgetToolbar
             canEdit={canEdit}
-            projectId={project.id}
+            context={{ queryKey: contextKey, targetId }}
             filters={filters}
             onFiltersChange={setFilters}
             onRefresh={fetchBudgetData}
@@ -384,14 +506,18 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
                 size={160}
               />
 
-              <div className="grid w-full gap-3 md:grid-cols-3 text-sm text-muted-foreground">
+              <div className="grid w-full gap-3 text-sm text-muted-foreground md:grid-cols-3">
                 <div>
                   <p className="text-xs uppercase tracking-wide">Planned Budget</p>
-                  <p className="text-lg font-semibold text-foreground">€{(plannedBudget ?? 0).toLocaleString()}</p>
+                  <p className="text-lg font-semibold text-foreground">
+                    €{(plannedBudget ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide">Actual Spend</p>
-                  <p className="text-lg font-semibold text-foreground">€{totals.total.toLocaleString()}</p>
+                  <p className="text-lg font-semibold text-foreground">
+                    €{totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide">Variance</p>
@@ -412,8 +538,7 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
           </Card>
         </div>
 
-        {/* Sidebar with Charts and Totals */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="space-y-6 lg:col-span-3">
           <Card>
             <CardHeader>
               <CardTitle>Budget Summary</CardTitle>
@@ -421,7 +546,7 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
             <CardContent className="space-y-4">
               <div className="text-center">
                 <div className="text-3xl font-bold text-foreground">
-                  €{totals.total.toLocaleString()}
+                  €{totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </div>
                 <p className="text-sm text-muted-foreground">Total Budget</p>
               </div>
@@ -430,19 +555,19 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
                 {Object.entries(totals.totalsByCategory).map(([category, amount]) => (
                   <div key={category} className="flex justify-between text-sm">
                     <span className="capitalize">{category.toLowerCase()}</span>
-                    <span className="font-semibold">€{amount.toLocaleString()}</span>
+                    <span className="font-semibold">€{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                 ))}
               </div>
 
-              <div className="pt-2 border-t">
+              <div className="border-t pt-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Total Line Items</span>
                   <span className="font-semibold">{totals.linesCount}</span>
                 </div>
               </div>
 
-              <div className="pt-4 border-t space-y-2">
+              <div className="space-y-2 border-t pt-4">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Default VAT (%)</p>
                 <div className="flex items-center gap-2">
                   <Input
@@ -455,20 +580,14 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
                     className="w-24"
                     disabled={!canEdit || isSavingVat}
                   />
-                  <Button
-                    size="sm"
-                    onClick={handleVatSave}
-                    disabled={!canEdit || isSavingVat}
-                  >
+                  <Button size="sm" onClick={handleVatSave} disabled={!canEdit || isSavingVat}>
                     {isSavingVat ? "Saving" : "Save"}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Applied automatically to every line item in this budget.
-                </p>
+                <p className="text-xs text-muted-foreground">Applied automatically to every line item in this budget.</p>
               </div>
 
-              <div className="pt-4 border-t space-y-2">
+              <div className="space-y-2 border-t pt-4">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Planned Budget (€)</p>
                 <div className="flex items-center gap-2">
                   <Input
@@ -484,9 +603,7 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
                     {isSavingPlanned ? "Saving" : "Save"}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Used to monitor variance between planned and actual spend.
-                </p>
+                <p className="text-xs text-muted-foreground">Used to monitor variance between planned and actual spend.</p>
               </div>
             </CardContent>
           </Card>
@@ -508,29 +625,19 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
                   className="w-full justify-start"
                   onClick={() => setShowAddDialog(true)}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 h-4 w-4" />
                   Add Line Item
                 </Button>
               )}
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start"
-                disabled // TODO: Implement export
-              >
-                <Download className="h-4 w-4 mr-2" />
+              <Button variant="outline" size="sm" className="w-full justify-start" disabled>
+                <Download className="mr-2 h-4 w-4" />
                 Export to Excel
               </Button>
 
               {canEdit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start"
-                  disabled // TODO: Implement import
-                >
-                  <Upload className="h-4 w-4 mr-2" />
+                <Button variant="outline" size="sm" className="w-full justify-start" disabled>
+                  <Upload className="mr-2 h-4 w-4" />
                   Import from Excel
                 </Button>
               )}
@@ -539,11 +646,10 @@ export function BudgetWorkspace({ project, canEdit }: BudgetWorkspaceProps) {
         </div>
       </div>
 
-      {/* Add Line Dialog */}
       <AddLineDialog
         isOpen={showAddDialog}
         onClose={() => setShowAddDialog(false)}
-        projectId={project.id}
+        context={{ queryKey: contextKey, targetId }}
         onLineAdded={handleLineAdded}
       />
     </div>

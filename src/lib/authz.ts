@@ -9,6 +9,34 @@ export class AuthorizationError extends Error {
   }
 }
 
+interface UserRoleContext {
+  roleName: string | null;
+  permissions: string[];
+}
+
+async function getUserRoleContext(userId: string): Promise<UserRoleContext | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      role: {
+        select: {
+          name: true,
+          permissions: { select: { action: true } },
+        },
+      },
+    },
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    roleName: user.role?.name ?? null,
+    permissions: user.role?.permissions.map((permission) => permission.action) ?? [],
+  };
+}
+
 export async function requireSession() {
   const session = await auth();
   if (!session?.user?.id) {
@@ -45,24 +73,13 @@ export async function requireAdmin() {
 }
 
 export async function canViewProject(userId: string, projectId: string) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      role: {
-        select: {
-          name: true,
-          permissions: { select: { action: true } },
-        },
-      },
-    },
-  });
+  const context = await getUserRoleContext(userId);
 
-  if (!user) {
+  if (!context) {
     return false;
   }
 
-  const roleName = user.role?.name ?? null;
-  const permissions = user.role?.permissions.map((permission) => permission.action) ?? [];
+  const { roleName, permissions } = context;
 
   if (isAdminRole(roleName) || permissions.includes("VIEW_PROJECT")) {
     return true;
@@ -90,24 +107,13 @@ export async function requireProjectView(projectId: string) {
 export async function requireProjectBudgetEdit(projectId: string) {
   const session = await requireSession();
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      role: {
-        select: {
-          name: true,
-          permissions: { select: { action: true } },
-        },
-      },
-    },
-  });
+  const context = await getUserRoleContext(session.user.id);
 
-  if (!user) {
+  if (!context) {
     throw new AuthorizationError("User not found", 404);
   }
 
-  const roleName = user.role?.name ?? null;
-  const permissions = user.role?.permissions.map((permission) => permission.action) ?? [];
+  const { roleName, permissions } = context;
 
   // Admin or users with MANAGE_USERS permission can edit budgets
   if (isAdminRole(roleName) || permissions.includes("MANAGE_USERS")) {
@@ -125,4 +131,106 @@ export async function requireProjectBudgetEdit(projectId: string) {
   }
 
   throw new AuthorizationError("Forbidden - budget edit requires Admin or Project Manager role", 403);
+}
+
+async function getWorkspaceForAuthorization(workspaceId: string) {
+  const workspace = await prisma.budgetWorkspace.findUnique({
+    where: { id: workspaceId },
+    select: {
+      id: true,
+      ownerId: true,
+      projectId: true,
+    },
+  });
+
+  if (!workspace) {
+    throw new AuthorizationError("Budget workspace not found", 404);
+  }
+
+  return workspace;
+}
+
+export async function canViewWorkspace(userId: string, workspaceId: string) {
+  const workspace = await prisma.budgetWorkspace.findUnique({
+    where: { id: workspaceId },
+    select: {
+      id: true,
+      ownerId: true,
+      projectId: true,
+    },
+  });
+
+  if (!workspace) {
+    return false;
+  }
+
+  if (workspace.projectId) {
+    return canViewProject(userId, workspace.projectId);
+  }
+
+  if (workspace.ownerId === userId) {
+    return true;
+  }
+
+  const context = await getUserRoleContext(userId);
+  if (!context) {
+    return false;
+  }
+
+  const { roleName, permissions } = context;
+  return isAdminRole(roleName) || permissions.includes("MANAGE_USERS");
+}
+
+export async function requireWorkspaceView(workspaceId: string) {
+  const workspace = await getWorkspaceForAuthorization(workspaceId);
+
+  if (workspace.projectId) {
+    return requireProjectView(workspace.projectId);
+  }
+
+  const session = await requireSession();
+
+  if (workspace.ownerId === session.user.id) {
+    return session;
+  }
+
+  const context = await getUserRoleContext(session.user.id);
+  if (!context) {
+    throw new AuthorizationError("User not found", 404);
+  }
+
+  const { roleName, permissions } = context;
+
+  if (isAdminRole(roleName) || permissions.includes("MANAGE_USERS")) {
+    return session;
+  }
+
+  throw new AuthorizationError("Forbidden - insufficient workspace permissions", 403);
+}
+
+export async function requireWorkspaceBudgetEdit(workspaceId: string) {
+  const workspace = await getWorkspaceForAuthorization(workspaceId);
+
+  if (workspace.projectId) {
+    return requireProjectBudgetEdit(workspace.projectId);
+  }
+
+  const session = await requireSession();
+
+  if (workspace.ownerId === session.user.id) {
+    return session;
+  }
+
+  const context = await getUserRoleContext(session.user.id);
+  if (!context) {
+    throw new AuthorizationError("User not found", 404);
+  }
+
+  const { roleName, permissions } = context;
+
+  if (isAdminRole(roleName) || permissions.includes("MANAGE_USERS")) {
+    return session;
+  }
+
+  throw new AuthorizationError("Forbidden - insufficient workspace permissions", 403);
 }

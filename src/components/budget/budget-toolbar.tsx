@@ -20,9 +20,14 @@ interface BudgetFilters {
   supplier: string;
 }
 
+interface BudgetContext {
+  queryKey: "projectId" | "workspaceId";
+  targetId: string;
+}
+
 interface BudgetToolbarProps {
   canEdit: boolean;
-  projectId: string;
+  context: BudgetContext;
   filters: BudgetFilters;
   onFiltersChange: (filters: BudgetFilters) => void;
   onRefresh: () => void;
@@ -30,7 +35,7 @@ interface BudgetToolbarProps {
 
 export function BudgetToolbar({
   canEdit,
-  projectId,
+  context,
   filters,
   onFiltersChange,
   onRefresh,
@@ -94,7 +99,11 @@ export function BudgetToolbar({
               </Button>
 
               <Button variant="outline" size="sm" className="flex items-center gap-2" asChild>
-                <a href={`/api/budgets/export?projectId=${projectId}`} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={`/api/budgets/export?${context.queryKey}=${context.targetId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <FileSpreadsheet className="h-4 w-4" />
                   Export PDF
                 </a>

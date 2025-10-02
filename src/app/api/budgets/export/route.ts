@@ -3,28 +3,50 @@ import PDFDocument from "pdfkit";
 
 export const runtime = "nodejs";
 
-import { requireProjectView } from "@/lib/authz";
+import { requireProjectView, requireWorkspaceView } from "@/lib/authz";
 import { prisma } from "@/lib/db";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get("projectId");
+  const workspaceId = searchParams.get("workspaceId");
 
-  if (!projectId) {
-    return NextResponse.json({ message: "projectId is required" }, { status: 400 });
+  const hasProject = Boolean(projectId);
+  const hasWorkspace = Boolean(workspaceId);
+
+  if (hasProject === hasWorkspace) {
+    return NextResponse.json({ message: "Provide either projectId or workspaceId" }, { status: 400 });
   }
 
-  await requireProjectView(projectId);
+  if (projectId) {
+    await requireProjectView(projectId);
+  }
+
+  if (workspaceId) {
+    await requireWorkspaceView(workspaceId);
+  }
+
+  const whereClause = projectId ? { projectId } : { workspaceId: workspaceId! };
 
   const sheet = await prisma.budgetSheet.findUnique({
-    where: { projectId },
+    where: whereClause,
     include: {
       project: {
         select: {
+          id: true,
           name: true,
           code: true,
           budgetPlanned: true,
           budgetActual: true,
+        },
+      },
+      workspace: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          planned: true,
+          actual: true,
         },
       },
       lines: {
@@ -48,7 +70,13 @@ export async function GET(request: Request) {
   }
 
   const project = sheet.project;
-  const planned = project?.budgetPlanned ? Number(project.budgetPlanned) : 0;
+  const workspace = sheet.workspace;
+
+  const planned = project?.budgetPlanned
+    ? Number(project.budgetPlanned)
+    : workspace?.planned
+      ? Number(workspace.planned)
+      : 0;
   const actual = sheet.lines.reduce((total, line) => {
     const lineTotal = Number(line.quantity) * Number(line.unitPrice);
     const vatRate = sheet.vatDefault ? Number(sheet.vatDefault) : 0;
@@ -68,10 +96,20 @@ export async function GET(request: Request) {
     doc.on("error", reject);
   });
 
-  doc.fontSize(18).text(`Budget Summary - ${project?.code ?? "Project"}`, { underline: true });
+  const headingLabel = project?.code ?? workspace?.name ?? "Budget";
+  doc.fontSize(18).text(`Budget Summary - ${headingLabel}`, { underline: true });
   doc.moveDown();
-  doc.fontSize(12).text(`Project: ${project?.name ?? "Unknown"}`);
-  doc.text(`Planned Budget: €${planned.toLocaleString()}`);
+  if (project) {
+    doc.fontSize(12).text(`Project: ${project.name ?? "Unknown"}`);
+  }
+  if (workspace) {
+    doc.fontSize(12).text(`Workspace: ${workspace.name ?? "Untitled"}`);
+    if (workspace.description) {
+      doc.fontSize(10).text(workspace.description);
+    }
+  }
+  doc.moveDown(0.5);
+  doc.fontSize(12).text(`Planned Budget: €${planned.toLocaleString()}`);
   doc.text(
     `Actual Spend: €${actual.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
   );
@@ -112,7 +150,7 @@ export async function GET(request: Request) {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Length": String(buffer.length),
-      "Content-Disposition": `attachment; filename=budget-${project?.code ?? projectId}.pdf`,
+      "Content-Disposition": `attachment; filename=budget-${headingLabel.replace(/\s+/g, "-")}.pdf`,
     },
   });
 }

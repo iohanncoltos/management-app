@@ -37,7 +37,6 @@ import {
 const editLineSchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
   quantity: z.number().positive("Quantity must be positive"),
-  unit: z.string().max(50).optional(),
   unitPrice: z.number().min(0, "Unit price must be non-negative"),
   currency: z.string().length(3).optional(),
   supplier: z.string().max(100).optional(),
@@ -63,7 +62,6 @@ interface BudgetLine {
   name: string;
   category: string;
   quantity: number;
-  unit: string | null;
   unitPrice: number;
   currency: string;
   vatPercent: number | null;
@@ -92,7 +90,6 @@ export function EditLineDialog({ line, isOpen, onClose, onLineUpdated }: EditLin
     defaultValues: {
       name: "",
       quantity: 1,
-      unit: "",
       unitPrice: 0,
       currency: "EUR",
       supplier: "",
@@ -109,7 +106,6 @@ export function EditLineDialog({ line, isOpen, onClose, onLineUpdated }: EditLin
       form.reset({
         name: line.name,
         quantity: line.quantity,
-        unit: line.unit || "",
         unitPrice: line.unitPrice,
         currency: line.currency,
         supplier: line.supplier || "",
@@ -130,7 +126,6 @@ export function EditLineDialog({ line, isOpen, onClose, onLineUpdated }: EditLin
         ...data,
         category: finalCategory,
         // Clean up empty strings
-        unit: data.unit || undefined,
         supplier: data.supplier || undefined,
         link: data.link || undefined,
         notes: data.notes || undefined,
@@ -220,20 +215,6 @@ export function EditLineDialog({ line, isOpen, onClose, onLineUpdated }: EditLin
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="unit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unit</FormLabel>
-                    <FormControl>
-                      <Input placeholder="pcs, kg, m, AWG..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
