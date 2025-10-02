@@ -82,12 +82,11 @@ export async function getCalendarSchedule({ date, view, userId, canViewAllTasks 
     end: { gte: new Date(range.rangeStart) },
   };
 
-  const taskWhere = canViewAllTasks
-    ? overlapFilter
-    : {
-        assigneeId: userId,
-        ...overlapFilter,
-      };
+  // Calendar should always show only user's own tasks
+  const taskWhere = {
+    assigneeId: userId,
+    ...overlapFilter,
+  };
 
   const tasks = await prisma.task.findMany({
     where: taskWhere,
