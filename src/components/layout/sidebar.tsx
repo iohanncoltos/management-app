@@ -9,10 +9,12 @@ import { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export type SidebarUser = {
   name: string;
   email: string;
+  avatarUrl: string | null;
   role: string | null;
   permissions: string[];
 };
@@ -67,10 +69,18 @@ function NavigationList({ items, userPermissions }: { items: NavItem[]; userPerm
 }
 
 function SidebarContent({ user, footer }: { user: SidebarUser; footer?: ReactNode }) {
+  const initials = user.name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join("")
+    .padEnd(2, " ");
+
   return (
     <div className="flex h-full flex-col gap-6">
       <div className="flex items-center justify-between">
-        <Link href="/dashboard" className="group">
+        <Link href="/home" className="group">
           <p className="font-display text-lg font-semibold tracking-wide group-hover:text-accent">Intermax</p>
           <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground group-hover:text-foreground">Command</p>
         </Link>
@@ -85,8 +95,15 @@ function SidebarContent({ user, footer }: { user: SidebarUser; footer?: ReactNod
       </div>
       <div className="mt-auto space-y-4">
         <div className="rounded-3xl border border-border/60 bg-secondary/60 p-4">
-          <p className="text-sm font-semibold text-foreground">{user.name}</p>
-          <p className="text-xs text-muted-foreground">{user.email}</p>
+          <div className="mb-3 flex items-center gap-3">
+            <Avatar className="h-12 w-12 border border-border/60">
+              {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt={user.name} /> : <AvatarFallback>{initials}</AvatarFallback>}
+            </Avatar>
+            <div>
+              <p className="text-sm font-semibold text-foreground">{user.name}</p>
+              <p className="text-xs text-muted-foreground">{user.email}</p>
+            </div>
+          </div>
           <p className="mt-2 inline-flex rounded-xl bg-accent/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
             {user.role ?? "Unassigned"}
           </p>

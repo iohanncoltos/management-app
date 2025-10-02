@@ -32,6 +32,7 @@ type PrismaUserWithRole = {
   email: string;
   name: string | null;
   passwordHash: string | null;
+  avatarUrl: string | null;
   role: {
     id: string;
     name: string;
@@ -44,6 +45,7 @@ function toSessionUser(user: PrismaUserWithRole): SessionUser {
     id: user.id,
     email: user.email,
     name: user.name,
+    avatarUrl: user.avatarUrl,
     role: user.role?.name ?? null,
     permissions: user.role?.permissions.map((permission) => permission.action) ?? [],
   };
@@ -136,6 +138,7 @@ export const authConfig: NextAuthOptions = {
         const sessionUser = user as SessionUser;
         token.role = sessionUser.role;
         token.permissions = sessionUser.permissions;
+         token.avatarUrl = sessionUser.avatarUrl;
         token.roleRefreshedAt = Date.now();
       }
 
@@ -153,6 +156,7 @@ export const authConfig: NextAuthOptions = {
         token.roleRefreshedAt = Date.now();
         token.name = refreshed?.name ?? token.name ?? null;
         token.email = refreshed?.email ?? token.email ?? null;
+        token.avatarUrl = refreshed?.avatarUrl ?? (token.avatarUrl as string | null) ?? null;
       }
 
       return token;
@@ -166,6 +170,7 @@ export const authConfig: NextAuthOptions = {
       session.user.email = (token.email as string | null) ?? session.user.email ?? "";
       session.user.name = (token.name as string | null) ?? session.user.name ?? null;
       session.user.role = (token.role as string | null) ?? null;
+      session.user.avatarUrl = (token.avatarUrl as string | null) ?? session.user.avatarUrl ?? null;
       session.user.permissions = Array.isArray(token.permissions)
         ? (token.permissions as string[])
         : [];
@@ -176,6 +181,7 @@ export const authConfig: NextAuthOptions = {
           session.user.name = refreshed.name;
           session.user.role = refreshed.role;
           session.user.permissions = refreshed.permissions;
+          session.user.avatarUrl = refreshed.avatarUrl;
         }
       }
 
@@ -206,6 +212,7 @@ export type SessionUser = {
   id: string;
   email: string;
   name: string | null;
+  avatarUrl: string | null;
   role: string | null;
   permissions: string[];
 };

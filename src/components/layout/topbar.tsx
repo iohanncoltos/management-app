@@ -16,12 +16,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { MobileSidebar, type SidebarUser } from "./sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface TopbarProps {
   user: SidebarUser;
 }
 
 export function Topbar({ user }: TopbarProps) {
+  const initials = user.name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join("")
+    .padEnd(2, " ");
+
   return (
     <header className="sticky top-0 z-40 flex h-20 items-center justify-between border-b border-border/60 bg-background/80 px-6 backdrop-blur-xl">
       <div className="flex items-center gap-3">
@@ -41,9 +50,12 @@ export function Topbar({ user }: TopbarProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-3 rounded-2xl">
-              <div className="flex flex-col items-start leading-4">
+              <Avatar className="h-10 w-10 border border-border/60">
+                {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt={user.name} /> : <AvatarFallback>{initials}</AvatarFallback>}
+              </Avatar>
+              <div className="flex flex-col items-start leading-4 text-left">
                 <span className="text-sm font-semibold text-foreground">{user.name}</span>
-                <span className="text-xs text-muted-foreground">{user.role}</span>
+                <span className="text-xs text-muted-foreground">{user.role ?? ""}</span>
               </div>
             </Button>
           </DropdownMenuTrigger>

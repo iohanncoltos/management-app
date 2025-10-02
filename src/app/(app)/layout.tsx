@@ -18,6 +18,7 @@ export default async function AppLayout({ children }: AppLayoutProps) {
   const user = {
     name: session.user.name ?? "Operator",
     email: session.user.email ?? "",
+    avatarUrl: session.user.avatarUrl ?? null,
     role: session.user.role,
     permissions: session.user.permissions ?? [],
   } as const;

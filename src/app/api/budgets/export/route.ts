@@ -86,7 +86,8 @@ export async function GET(request: Request) {
 
   const variance = planned ? actual - planned : actual;
 
-  const doc = new PDFDocument({ margin: 40, font: "Helvetica" });
+  const doc = new PDFDocument({ margin: 40 });
+  doc.font("Helvetica");
   const chunks: Buffer[] = [];
   const bufferPromise = new Promise<Buffer>((resolve, reject) => {
     doc.on("data", (chunk: Buffer | string) =>
@@ -143,9 +144,9 @@ export async function GET(request: Request) {
   doc.end();
 
   const buffer = await bufferPromise;
-  const arrayBuffer = Uint8Array.from(buffer).buffer;
+  const payload = Uint8Array.from(buffer);
 
-  return new NextResponse(arrayBuffer, {
+  return new Response(payload, {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",

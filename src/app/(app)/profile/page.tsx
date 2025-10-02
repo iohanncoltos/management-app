@@ -45,6 +45,7 @@ export default async function ProfilePage() {
             firstName={firstName}
             lastName={lastName}
             email={session.user.email ?? ""}
+            avatarUrl={session.user.avatarUrl ?? null}
           />
         </CardContent>
       </Card>

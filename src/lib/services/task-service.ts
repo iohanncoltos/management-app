@@ -1,6 +1,7 @@
 import { Prisma, TaskPriority, TaskStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
+import { sendTaskAssignmentEmail } from "@/lib/mail";
 import { TaskFilters, TaskSort } from "@/lib/types/tasks";
 
 const taskInclude = {
@@ -162,18 +163,69 @@ export async function getTaskById(taskId: string) {
 }
 
 export async function createTask(data: Prisma.TaskUncheckedCreateInput) {
-  return prisma.task.create({
+  const task = await prisma.task.create({
     data,
     include: taskInclude,
   });
+
+  // Send email notification if task is assigned to a user
+  if (task.assigneeId && task.assignee?.email) {
+    try {
+      await sendTaskAssignmentEmail({
+        to: task.assignee.email,
+        taskTitle: task.title,
+        start: task.start,
+        end: task.end,
+        description: task.description,
+        projectName: task.project?.name,
+        assignerName: task.createdBy?.name,
+        taskId: task.id,
+      });
+    } catch (error) {
+      console.error("Failed to send task assignment email:", error);
+      // Don't throw - task creation should succeed even if email fails
+    }
+  }
+
+  return task;
 }
 
 export async function updateTask(taskId: string, data: Prisma.TaskUncheckedUpdateInput) {
-  return prisma.task.update({
+  // Get the existing task to check if assignee is changing
+  const existingTask = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { assigneeId: true },
+  });
+
+  const task = await prisma.task.update({
     where: { id: taskId },
     data,
     include: taskInclude,
   });
+
+  // Send email notification if assignee is being changed or newly assigned
+  const assigneeChanged = existingTask && existingTask.assigneeId !== task.assigneeId;
+  const newlyAssigned = !existingTask?.assigneeId && task.assigneeId;
+
+  if ((assigneeChanged || newlyAssigned) && task.assigneeId && task.assignee?.email) {
+    try {
+      await sendTaskAssignmentEmail({
+        to: task.assignee.email,
+        taskTitle: task.title,
+        start: task.start,
+        end: task.end,
+        description: task.description,
+        projectName: task.project?.name,
+        assignerName: task.createdBy?.name,
+        taskId: task.id,
+      });
+    } catch (error) {
+      console.error("Failed to send task assignment email:", error);
+      // Don't throw - task update should succeed even if email fails
+    }
+  }
+
+  return task;
 }
 
 export async function deleteTask(taskId: string) {

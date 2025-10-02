@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
+  LayoutDashboard,
+  Calendar,
   AlarmClockCheck,
   Archive,
   BarChart3,
@@ -22,7 +24,9 @@ export type NavItem = {
 };
 
 export const primaryNav: NavItem[] = [
-  { label: "Mission Control", href: "/dashboard", icon: Home },
+  { label: "Home", href: "/home", icon: Home },
+  { label: "Calendar", href: "/calendar", icon: Calendar },
+  { label: "Mission Control", href: "/dashboard", icon: LayoutDashboard },
   { label: "My Tasks", href: "/tasks", icon: Layers3 },
   { label: "Projects", href: "/projects", icon: BriefcaseBusiness, permissions: ["VIEW_PROJECT"] },
   { label: "Gantt", href: "/projects/gantt", icon: CalendarClock, permissions: ["ASSIGN_TASKS"] },

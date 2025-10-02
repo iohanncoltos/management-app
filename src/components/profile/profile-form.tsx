@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -11,6 +11,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { ProfileAvatarUploader } from "./profile-avatar";
 
 const schema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(80, "First name is too long"),
@@ -23,12 +24,14 @@ interface ProfileFormProps {
   firstName: string;
   lastName: string;
   email: string;
+  avatarUrl: string | null;
 }
 
-export function ProfileForm({ firstName, lastName, email }: ProfileFormProps) {
+export function ProfileForm({ firstName, lastName, email, avatarUrl }: ProfileFormProps) {
   const router = useRouter();
   const { data: session, update } = useSession();
   const [isPending, startTransition] = useTransition();
+  const [currentAvatar, setCurrentAvatar] = useState<string | null>(avatarUrl);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(schema),
@@ -74,6 +77,20 @@ export function ProfileForm({ firstName, lastName, email }: ProfileFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={onSubmit} className="space-y-6">
+        <ProfileAvatarUploader
+          name={`${firstName} ${lastName}`.trim()}
+          avatarUrl={currentAvatar}
+          onAvatarChange={async (next) => {
+            setCurrentAvatar(next);
+            await update({
+              user: {
+                ...session?.user,
+                avatarUrl: next,
+              },
+            });
+            router.refresh();
+          }}
+        />
         <div className="grid gap-4 md:grid-cols-2">
           <FormField
             control={form.control}

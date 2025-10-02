@@ -32,13 +32,13 @@ export default withAuth(
     }
 
     if (pathname === "/" || pathname === "/login" || pathname === "/register") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return NextResponse.redirect(new URL("/home", request.url));
     }
 
     const isAdminRoute = ADMIN_PATHS.some((path) => pathname.startsWith(path));
     const permissions = Array.isArray(authToken.permissions) ? (authToken.permissions as string[]) : [];
     if (isAdminRoute && !permissions.includes(MANAGE_USERS)) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return NextResponse.redirect(new URL("/home", request.url));
     }
 
     return NextResponse.next();
@@ -55,6 +55,7 @@ export const config = {
     "/",
     "/login",
     "/register",
+    "/home",
     "/dashboard",
     "/projects/:path*",
     "/admin/:path*",
