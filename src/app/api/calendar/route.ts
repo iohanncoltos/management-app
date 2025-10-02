@@ -26,13 +26,10 @@ export async function GET(request: Request) {
     const view = parseView(searchParams.get("view"));
     const date = toDate(searchParams.get("date"), new Date());
 
-    const canViewAllTasks = session.user.permissions.includes("ASSIGN_TASKS");
-
     const payload = await getCalendarSchedule({
       date,
       view,
       userId: session.user.id,
-      canViewAllTasks,
     });
 
     return NextResponse.json(payload);

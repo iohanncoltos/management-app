@@ -32,7 +32,6 @@ interface CalendarParams {
   date: Date;
   view: CalendarView;
   userId: string;
-  canViewAllTasks: boolean;
 }
 
 function computeRange(date: Date, view: CalendarView): CalendarRange {
@@ -74,7 +73,7 @@ function computeRange(date: Date, view: CalendarView): CalendarRange {
   };
 }
 
-export async function getCalendarSchedule({ date, view, userId, canViewAllTasks }: CalendarParams) {
+export async function getCalendarSchedule({ date, view, userId }: CalendarParams) {
   const range = computeRange(date, view);
 
   const overlapFilter = {

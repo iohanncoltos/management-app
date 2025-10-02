@@ -22,13 +22,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const date = dateParam ? new Date(dateParam) : new Date();
   const view = parseView(viewParam);
 
-  const canViewAllTasks = session.user.permissions.includes("ASSIGN_TASKS");
-
   const schedule = await getCalendarSchedule({
     date,
     view,
     userId: session.user.id,
-    canViewAllTasks,
   });
 
   return <CalendarShell initialRange={schedule.range} initialTasks={schedule.tasks} />;

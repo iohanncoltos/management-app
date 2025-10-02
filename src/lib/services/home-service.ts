@@ -3,7 +3,6 @@ import { addDays, endOfDay, formatISO, startOfDay } from "date-fns";
 
 import { prisma } from "@/lib/db";
 
-const ASSIGN_TASKS = "ASSIGN_TASKS";
 const VIEW_PROJECT = "VIEW_PROJECT";
 const MANAGE_USERS = "MANAGE_USERS";
 const CREATE_PROJECT = "CREATE_PROJECT";
@@ -66,7 +65,6 @@ function formatDueLabel(due: Date | null) {
 }
 
 export async function getHomeOverview(userId: string, permissions: string[]): Promise<HomeOverviewData> {
-  const canViewAllTasks = permissions.includes(ASSIGN_TASKS);
   const canViewAllProjects = permissions.some((permission) =>
     [CREATE_PROJECT, MANAGE_USERS, VIEW_PROJECT].includes(permission),
   );
