@@ -105,33 +105,126 @@ export function CalendarShell({ initialRange, initialTasks }: CalendarShellProps
     return Array.from({ length: endHour - startHour + 1 }, (_, index) => startHour + index);
   }, []);
 
-  const renderTaskBlock = (task: CalendarTask) => {
-    const start = new Date(task.start);
-    const end = new Date(task.end);
-    const startMinutes = start.getHours() * 60 + start.getMinutes();
-    const endMinutes = end.getHours() * 60 + end.getMinutes();
+  // Calculate task layout with column positioning for overlapping tasks
+  const calculateTaskLayout = (tasks: CalendarTask[]) => {
     const dayStart = 6 * 60;
     const dayEnd = 20 * 60;
-    const clampedStart = Math.max(startMinutes, dayStart);
-    const clampedEnd = Math.max(clampedStart + 30, Math.min(endMinutes, dayEnd));
-    const top = ((clampedStart - dayStart) / (dayEnd - dayStart)) * 100;
-    const height = ((clampedEnd - clampedStart) / (dayEnd - dayStart)) * 100;
+
+    const tasksWithTimes = tasks.map((task) => {
+      const start = new Date(task.start);
+      const end = new Date(task.end);
+      const startMinutes = start.getHours() * 60 + start.getMinutes();
+      const endMinutes = end.getHours() * 60 + end.getMinutes();
+      const clampedStart = Math.max(startMinutes, dayStart);
+      const clampedEnd = Math.max(clampedStart + 30, Math.min(endMinutes, dayEnd));
+
+      return {
+        task,
+        startMinutes: clampedStart,
+        endMinutes: clampedEnd,
+        start,
+        end,
+      };
+    });
+
+    // Sort by start time, then by duration (longer first)
+    tasksWithTimes.sort((a, b) => {
+      if (a.startMinutes !== b.startMinutes) {
+        return a.startMinutes - b.startMinutes;
+      }
+      return b.endMinutes - b.startMinutes - (a.endMinutes - a.startMinutes);
+    });
+
+    // Detect overlaps and assign columns
+    const taskLayout: Array<{
+      task: CalendarTask;
+      column: number;
+      totalColumns: number;
+      top: number;
+      height: number;
+      start: Date;
+      end: Date;
+    }> = [];
+
+    tasksWithTimes.forEach((taskWithTime) => {
+      // Find overlapping tasks that are already positioned
+      const overlapping = taskLayout.filter((layout) => {
+        return (
+          layout.top < ((taskWithTime.endMinutes - dayStart) / (dayEnd - dayStart)) * 100 &&
+          layout.top + layout.height > ((taskWithTime.startMinutes - dayStart) / (dayEnd - dayStart)) * 100
+        );
+      });
+
+      // Find the first available column
+      const usedColumns = new Set(overlapping.map((t) => t.column));
+      let column = 0;
+      while (usedColumns.has(column)) {
+        column++;
+      }
+
+      // Calculate total columns needed (max of current and overlapping)
+      const maxColumn = Math.max(column, ...overlapping.map((t) => t.column));
+      const totalColumns = maxColumn + 1;
+
+      // Update total columns for overlapping tasks
+      overlapping.forEach((layout) => {
+        layout.totalColumns = Math.max(layout.totalColumns, totalColumns);
+      });
+
+      const top = ((taskWithTime.startMinutes - dayStart) / (dayEnd - dayStart)) * 100;
+      const height = ((taskWithTime.endMinutes - taskWithTime.startMinutes) / (dayEnd - dayStart)) * 100;
+
+      taskLayout.push({
+        task: taskWithTime.task,
+        column,
+        totalColumns,
+        top,
+        height,
+        start: taskWithTime.start,
+        end: taskWithTime.end,
+      });
+    });
+
+    return taskLayout;
+  };
+
+  const renderTaskBlock = (layout: {
+    task: CalendarTask;
+    column: number;
+    totalColumns: number;
+    top: number;
+    height: number;
+    start: Date;
+    end: Date;
+  }) => {
+    const { task, column, totalColumns, top, height, start, end } = layout;
+
+    const columnWidth = 100 / totalColumns;
+    const left = column * columnWidth;
+    const width = columnWidth;
 
     const style = {
       top: `${top}%`,
       height: `${height}%`,
+      left: `${left}%`,
+      width: `${width - 1}%`, // -1% for gap between columns
     } as React.CSSProperties;
+
+    // Truncate title if needed
+    const shouldTruncate = totalColumns > 1 || task.title.length > 30;
+    const displayTitle = shouldTruncate && task.title.length > 25 ? `${task.title.slice(0, 25)}...` : task.title;
 
     return (
       <div
         key={task.id}
         style={style}
-        className={`absolute left-1 right-1 rounded-xl border px-3 py-2 text-xs shadow-sm transition ${
+        title={task.title} // Tooltip shows full title
+        className={`absolute rounded-lg border px-2 py-1.5 text-xs shadow-sm transition hover:z-10 hover:shadow-md ${
           PRIORITY_CLASSES[task.priority] ?? "bg-secondary/60 text-foreground border-transparent"
         }`}
       >
-        <p className="font-medium leading-snug">{task.title}</p>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="font-medium leading-tight truncate">{displayTitle}</p>
+        <p className="text-[10px] text-muted-foreground truncate">
           {format(start, "HH:mm")} – {format(end, "HH:mm")}
           {task.project ? ` · ${task.project.code ?? task.project.name}` : ""}
         </p>
@@ -199,7 +292,9 @@ export function CalendarShell({ initialRange, initialTasks }: CalendarShellProps
                   ))}
                 </div>
                 <div className="relative h-full">
-                  {(dayTasksMap.get(format(new Date(range.date), "yyyy-MM-dd")) ?? []).map((task) => renderTaskBlock(task))}
+                  {calculateTaskLayout(dayTasksMap.get(format(new Date(range.date), "yyyy-MM-dd")) ?? []).map((layout) =>
+                    renderTaskBlock(layout)
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -245,7 +340,7 @@ export function CalendarShell({ initialRange, initialTasks }: CalendarShellProps
                           ))}
                         </div>
                         <div className="relative h-full">
-                          {dayTasks.map((task) => renderTaskBlock(task))}
+                          {calculateTaskLayout(dayTasks).map((layout) => renderTaskBlock(layout))}
                         </div>
                       </div>
                     );
