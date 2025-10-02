@@ -133,6 +133,13 @@ export const authConfig: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      // After login, always redirect to home page
+      if (url.startsWith(baseUrl)) {
+        return `${baseUrl}/home`;
+      }
+      return `${baseUrl}/home`;
+    },
     async jwt({ token, user, trigger }) {
       if (user) {
         const sessionUser = user as SessionUser;
