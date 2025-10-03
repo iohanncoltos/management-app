@@ -1,6 +1,9 @@
+"use client";
+
 import { ReactNode } from "react";
 
 import { AppToaster } from "@/components/ui/toaster";
+import { useNotificationAlerts } from "@/hooks/use-notifications";
 import { Sidebar, type SidebarUser } from "./sidebar";
 import { Topbar } from "./topbar";
 
@@ -11,6 +14,9 @@ interface AppShellProps {
 }
 
 export function AppShell({ user, children, footer }: AppShellProps) {
+  // Enable notification sound alerts
+  useNotificationAlerts();
+
   return (
     <div className="relative flex min-h-screen bg-background text-foreground">
       <Sidebar user={user} footer={footer} />
