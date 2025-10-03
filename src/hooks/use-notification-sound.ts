@@ -27,6 +27,7 @@ export function useNotificationSound() {
         try {
           const audio = new Audio(soundFile);
           audio.volume = 0.5; // 50% volume
+          audio.preload = "auto"; // Preload the audio
 
           // Test if the file loads
           await new Promise((resolve, reject) => {
@@ -47,57 +48,76 @@ export function useNotificationSound() {
       console.log("ℹ Using embedded fallback notification sound");
       audioRef.current = new Audio(FALLBACK_SOUND);
       audioRef.current.volume = 0.3;
-
-      // Check if we can play (some browsers require user interaction first)
-      try {
-        if (audioRef.current) {
-          // Enable playback after user interaction
-          const promise = audioRef.current.play();
-          if (promise !== undefined) {
-            await promise;
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-            setCanPlay(true);
-            hasPlayedRef.current = false;
-          }
-        }
-      } catch {
-        // Browser blocked autoplay - will work after first user click
-        console.log("ℹ Notification sound will play after first user interaction");
-        setCanPlay(false);
-      }
     };
 
     loadAudio();
 
+    // Unlock audio on any user interaction
+    const unlockAudio = async () => {
+      if (!audioRef.current || canPlay) return;
+
+      try {
+        // Try to play and immediately pause
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+          setCanPlay(true);
+          console.log("✓ Audio unlocked - notifications will now play sound");
+        }
+      } catch {
+        // Still locked, will try again on next interaction
+        console.log("⏳ Audio not yet unlocked, waiting for user interaction...");
+      }
+    };
+
+    // Listen for user interactions to unlock audio
+    const events = ["click", "touchstart", "keydown"];
+    events.forEach((event) => {
+      document.addEventListener(event, unlockAudio, { once: true });
+    });
+
     return () => {
+      events.forEach((event) => {
+        document.removeEventListener(event, unlockAudio);
+      });
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
       }
     };
-  }, []);
+  }, [canPlay]);
 
   const playSound = async () => {
     if (!audioRef.current) {
+      console.warn("⚠ Audio not loaded yet");
       return;
     }
 
     try {
-      // Enable play on first user interaction
-      if (!canPlay && !hasPlayedRef.current) {
-        hasPlayedRef.current = true;
-        setCanPlay(true);
-      }
+      // Reset to start
+      audioRef.current.currentTime = 0;
 
-      audioRef.current.currentTime = 0; // Reset to start
+      // Attempt to play
       const playPromise = audioRef.current.play();
 
       if (playPromise !== undefined) {
         await playPromise;
+        console.log("🔊 Notification sound played");
+
+        // Mark as unlocked after first successful play
+        if (!canPlay) {
+          setCanPlay(true);
+        }
       }
-    } catch (error) {
-      console.error("Failed to play notification sound:", error);
+    } catch (err) {
+      // If play failed, try to unlock audio first
+      if (!canPlay) {
+        console.log("⏳ Audio not unlocked yet. It will play after any click/tap on the page.");
+      } else {
+        console.error("❌ Failed to play notification sound:", err);
+      }
     }
   };
 

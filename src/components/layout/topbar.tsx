@@ -18,7 +18,6 @@ import { Separator } from "@/components/ui/separator";
 import { MobileSidebar, type SidebarUser } from "./sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationBell } from "./notification-bell";
-import { NotificationSoundTest } from "./notification-sound-test";
 
 interface TopbarProps {
   user: SidebarUser;
@@ -45,7 +44,6 @@ export function Topbar({ user }: TopbarProps) {
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <NotificationSoundTest />
         <NotificationBell />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
