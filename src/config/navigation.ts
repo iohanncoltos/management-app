@@ -8,6 +8,7 @@ import {
   BarChart3,
   BriefcaseBusiness,
   CalendarClock,
+  FileText,
   Home,
   Inbox,
   Layers3,
@@ -33,6 +34,7 @@ export const primaryNav: NavItem[] = [
   { label: "Resources", href: "/resources", icon: Users, permissions: ["ASSIGN_TASKS"] },
   { label: "Budget", href: "/budget", icon: BarChart3, permissions: ["VIEW_PROJECT"] },
   { label: "Files", href: "/projects/files", icon: Archive, permissions: ["VIEW_PROJECT"] },
+  { label: "Reports", href: "/reports/daily", icon: FileText },
   { label: "Comms", href: "/messaging", icon: Inbox, permissions: ["ASSIGN_TASKS"] },
 ];
 

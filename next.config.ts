@@ -48,6 +48,17 @@ const devHeaders = baseHeaders;
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Fix for pdfkit in Next.js - these modules cause issues in serverless
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        canvas: false,
+        encoding: false,
+      };
+    }
+    return config;
+  },
   async headers() {
     const headers = isDev ? devHeaders : prodHeaders;
     return [

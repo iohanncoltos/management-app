@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { useNotificationPreferences } from "./use-notification-preferences";
+
 // Fallback notification sound as data URI (simple beep)
 // This is a base64-encoded simple notification sound
 const FALLBACK_SOUND = "data:audio/wav;base64,UklGRhwAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAABkYXRhAAAA";
@@ -14,6 +16,7 @@ export function useNotificationSound() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [canPlay, setCanPlay] = useState(false);
   const hasPlayedRef = useRef(false);
+  const { data: preferences } = useNotificationPreferences();
 
   useEffect(() => {
     // Create audio element - try WAV first, then MP3, then fallback
@@ -93,6 +96,22 @@ export function useNotificationSound() {
     if (!audioRef.current) {
       console.warn("⚠ Audio not loaded yet");
       return;
+    }
+
+    // Check if sound notifications are enabled
+    const soundEnabled = preferences?.notificationSound ?? true;
+    if (!soundEnabled) {
+      console.log("🔇 Sound notifications disabled");
+      return;
+    }
+
+    // Check if Do Not Disturb is active
+    if (preferences?.doNotDisturbUntil) {
+      const dndUntil = new Date(preferences.doNotDisturbUntil);
+      if (dndUntil > new Date()) {
+        console.log("🔕 Do Not Disturb is active, skipping sound");
+        return;
+      }
     }
 
     try {

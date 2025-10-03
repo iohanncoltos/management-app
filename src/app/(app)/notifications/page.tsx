@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, Loader2, Trash2 } from "lucide-react";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { NotificationSettings } from "@/components/layout/notification-settings";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,6 +42,8 @@ export default function NotificationsPage() {
         title="Notifications"
         description="Stay updated with your task assignments and progress"
       />
+
+      <NotificationSettings />
 
       <Card className="p-6">
         <div className="mb-6 flex items-center justify-between">

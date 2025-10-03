@@ -586,3 +586,100 @@ export async function sendDailyDigestEmail({
     text,
   });
 }
+
+interface DailyReportEmailParams {
+  to: string[];
+  reportDate: Date;
+  userName: string;
+  projectName?: string | null;
+  workSummary: string;
+  pdfAttachment?: Buffer;
+}
+
+export async function sendDailyReportEmail({
+  to,
+  reportDate,
+  userName,
+  projectName,
+  workSummary,
+  pdfAttachment,
+}: DailyReportEmailParams) {
+  const dateStr = reportDate.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const projectLine = projectName ? `<p><strong>Project:</strong> ${projectName}</p>` : "";
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #3a7bd5 0%, #3bb2ad 100%); padding: 30px; border-radius: 8px 8px 0 0;">
+        <h1 style="color: white; font-size: 24px; margin: 0;">Daily Work Report</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">${dateStr}</p>
+      </div>
+
+      <div style="background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; color: #1f2937; margin-bottom: 20px;">
+          <strong>${userName}</strong> has submitted their daily work report.
+        </p>
+
+        ${projectLine}
+
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+
+        <h3 style="color: #3a7bd5; font-size: 14px; text-transform: uppercase; margin-bottom: 10px;">Work Summary</h3>
+        <p style="color: #4b5563; line-height: 1.6; white-space: pre-wrap;">${workSummary.substring(0, 300)}${workSummary.length > 300 ? "..." : ""}</p>
+
+        <p style="margin-top: 24px;">
+          <a href="${env.server.APP_BASE_URL}/reports/history" style="background-color: #3a7bd5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
+            View Full Report
+          </a>
+        </p>
+
+        <p style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
+          <strong>For Intermax Projects Only - Confidential</strong><br/>
+          This email contains confidential information. If you received this in error, please delete it.
+        </p>
+      </div>
+    </div>
+  `;
+
+  const text = [
+    `Daily Work Report - ${dateStr}`,
+    "",
+    `${userName} has submitted their daily work report.`,
+    projectName ? `Project: ${projectName}` : null,
+    "",
+    "Work Summary:",
+    workSummary,
+    "",
+    `View full report: ${env.server.APP_BASE_URL}/reports/history`,
+    "",
+    "For Intermax Projects Only - Confidential",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const emailData: any = {
+    from: env.server.RESEND_FROM_EMAIL,
+    to,
+    subject: `Daily Work Report - ${dateStr}${projectName ? ` - ${projectName}` : ""}`,
+    html,
+    text,
+  };
+
+  // Add PDF attachment if provided
+  if (pdfAttachment) {
+    const filename = `DailyReport_${reportDate.toISOString().split("T")[0]}.pdf`;
+    emailData.attachments = [
+      {
+        filename,
+        content: pdfAttachment,
+      },
+    ];
+  }
+
+  await resend.emails.send(emailData);
+}
