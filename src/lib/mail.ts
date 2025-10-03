@@ -101,13 +101,28 @@ export async function sendTaskAssignmentEmail({
     `Open the task: ${taskUrl}`,
   ].filter(Boolean);
   const text = textLines.join("\n");
-  await resend.emails.send({
-    from: env.server.RESEND_FROM_EMAIL,
-    to: [to],
-    subject: `New task assigned: ${taskTitle}`,
-    html,
-    text,
-  });
+
+  try {
+    const result = await resend.emails.send({
+      from: env.server.RESEND_FROM_EMAIL,
+      to: [to],
+      subject: `New task assigned: ${taskTitle}`,
+      html,
+      text,
+    });
+
+    console.log("Resend API response:", result);
+
+    if (result.error) {
+      console.error("Resend API error:", result.error);
+      throw new Error(`Resend API error: ${JSON.stringify(result.error)}`);
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Failed to send email via Resend:", error);
+    throw error;
+  }
 }
 
 interface TaskUpdateMailParams {
