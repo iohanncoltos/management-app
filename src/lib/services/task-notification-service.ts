@@ -6,6 +6,11 @@ import {
   sendTaskCompletedEmail,
   sendTaskBlockedEmail,
 } from "@/lib/mail";
+import {
+  notifyTaskCompletion,
+  notifyProgressMilestone,
+  notifyTaskBlocked,
+} from "@/lib/services/notification-service";
 
 interface TaskUpdate {
   taskId: string;
@@ -125,6 +130,7 @@ export async function logTaskUpdate(update: TaskUpdate) {
 
     try {
       if (changeInfo.type === "COMPLETED") {
+        // Send email notification
         await sendTaskCompletedEmail({
           to: task.createdBy.email,
           taskTitle: task.title,
@@ -132,7 +138,17 @@ export async function logTaskUpdate(update: TaskUpdate) {
           projectName: task.project?.name,
           taskId: task.id,
         });
+
+        // Create in-app notification
+        await notifyTaskCompletion({
+          creatorId: task.createdById,
+          taskId: task.id,
+          taskTitle: task.title,
+          completerName: updaterName,
+          projectId: task.projectId || undefined,
+        });
       } else if (changeInfo.type === "BLOCKED") {
+        // Send email notification
         await sendTaskBlockedEmail({
           to: task.createdBy.email,
           taskTitle: task.title,
@@ -140,7 +156,17 @@ export async function logTaskUpdate(update: TaskUpdate) {
           projectName: task.project?.name,
           taskId: task.id,
         });
+
+        // Create in-app notification
+        await notifyTaskBlocked({
+          creatorId: task.createdById,
+          taskId: task.id,
+          taskTitle: task.title,
+          blockerName: updaterName,
+          projectId: task.projectId || undefined,
+        });
       } else if (changeInfo.type === "PROGRESS" && changeInfo.milestone) {
+        // Send email notification
         await sendTaskProgressEmail({
           to: task.createdBy.email,
           taskTitle: task.title,
@@ -149,6 +175,16 @@ export async function logTaskUpdate(update: TaskUpdate) {
           newProgress: newProgress!,
           projectName: task.project?.name,
           taskId: task.id,
+        });
+
+        // Create in-app notification
+        await notifyProgressMilestone({
+          creatorId: task.createdById,
+          taskId: task.id,
+          taskTitle: task.title,
+          updaterName,
+          progress: newProgress!,
+          projectId: task.projectId || undefined,
         });
       }
     } catch (error) {

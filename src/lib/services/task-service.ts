@@ -2,6 +2,7 @@ import { Prisma, TaskPriority, TaskStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { sendTaskAssignmentEmail } from "@/lib/mail";
+import { notifyTaskAssignment, notifyTaskReassignment } from "@/lib/services/notification-service";
 import { TaskFilters, TaskSort } from "@/lib/types/tasks";
 
 const taskInclude = {
@@ -168,9 +169,10 @@ export async function createTask(data: Prisma.TaskUncheckedCreateInput) {
     include: taskInclude,
   });
 
-  // Send email notification if task is assigned to a user
+  // Send email notification and in-app notification if task is assigned to a user
   if (task.assigneeId && task.assignee?.email) {
     try {
+      // Send email
       await sendTaskAssignmentEmail({
         to: task.assignee.email,
         taskTitle: task.title,
@@ -181,9 +183,18 @@ export async function createTask(data: Prisma.TaskUncheckedCreateInput) {
         assignerName: task.createdBy?.name,
         taskId: task.id,
       });
+
+      // Create in-app notification
+      await notifyTaskAssignment({
+        assigneeId: task.assigneeId,
+        taskId: task.id,
+        taskTitle: task.title,
+        assignerName: task.createdBy?.name || "Someone",
+        projectId: task.projectId || undefined,
+      });
     } catch (error) {
-      console.error("Failed to send task assignment email:", error);
-      // Don't throw - task creation should succeed even if email fails
+      console.error("Failed to send task assignment notification:", error);
+      // Don't throw - task creation should succeed even if notification fails
     }
   }
 
@@ -209,6 +220,7 @@ export async function updateTask(taskId: string, data: Prisma.TaskUncheckedUpdat
 
   if ((assigneeChanged || newlyAssigned) && task.assigneeId && task.assignee?.email) {
     try {
+      // Send email
       await sendTaskAssignmentEmail({
         to: task.assignee.email,
         taskTitle: task.title,
@@ -219,9 +231,31 @@ export async function updateTask(taskId: string, data: Prisma.TaskUncheckedUpdat
         assignerName: task.createdBy?.name,
         taskId: task.id,
       });
+
+      // Create in-app notification
+      if (assigneeChanged) {
+        // Task was reassigned
+        await notifyTaskReassignment({
+          newAssigneeId: task.assigneeId,
+          oldAssigneeId: existingTask?.assigneeId || undefined,
+          taskId: task.id,
+          taskTitle: task.title,
+          assignerName: task.createdBy?.name || "Someone",
+          projectId: task.projectId || undefined,
+        });
+      } else if (newlyAssigned) {
+        // Task was newly assigned
+        await notifyTaskAssignment({
+          assigneeId: task.assigneeId,
+          taskId: task.id,
+          taskTitle: task.title,
+          assignerName: task.createdBy?.name || "Someone",
+          projectId: task.projectId || undefined,
+        });
+      }
     } catch (error) {
-      console.error("Failed to send task assignment email:", error);
-      // Don't throw - task update should succeed even if email fails
+      console.error("Failed to send task assignment notification:", error);
+      // Don't throw - task update should succeed even if notification fails
     }
   }
 

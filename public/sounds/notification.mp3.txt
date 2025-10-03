@@ -1,0 +1,11 @@
+NOTE: A notification sound file (notification.mp3) should be placed in this directory.
+
+For testing, the application will work without a sound file, it will just fail silently.
+
+To add a notification sound:
+1. Download a free notification sound from https://mixkit.co/free-sound-effects/notification/
+2. Rename it to "notification.mp3"
+3. Place it in the public/sounds/ directory
+4. Delete this .txt file
+
+Recommended: "Notification Alert Bell" or "Positive Notification" sounds work well.
