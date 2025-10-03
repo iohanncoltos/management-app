@@ -171,19 +171,20 @@ export async function createTask(data: Prisma.TaskUncheckedCreateInput) {
 
   // Send notifications if task is assigned to a user
   if (task.assigneeId) {
+    const assigneeId = task.assigneeId; // Capture the value to satisfy TypeScript
     // Run notifications asynchronously to avoid blocking task creation
     (async () => {
       try {
-        console.log(`📧 Task "${task.title}" assigned to user ${task.assigneeId}`);
+        console.log(`📧 Task "${task.title}" assigned to user ${assigneeId}`);
 
         // Fetch assignee email from database
         const assignee = await prisma.user.findUnique({
-          where: { id: task.assigneeId },
+          where: { id: assigneeId },
           select: { email: true, name: true },
         });
 
         if (!assignee) {
-          console.error(`⚠️ Assignee not found: ${task.assigneeId}`);
+          console.error(`⚠️ Assignee not found: ${assigneeId}`);
           return;
         }
 
@@ -191,7 +192,7 @@ export async function createTask(data: Prisma.TaskUncheckedCreateInput) {
 
         // Create in-app notification
         await notifyTaskAssignment({
-          assigneeId: task.assigneeId,
+          assigneeId: assigneeId,
           taskId: task.id,
           taskTitle: task.title,
           assignerName: task.createdBy?.name || "Someone",
@@ -241,6 +242,8 @@ export async function updateTask(taskId: string, data: Prisma.TaskUncheckedUpdat
   const newlyAssigned = !existingTask?.assigneeId && task.assigneeId;
 
   if ((assigneeChanged || newlyAssigned) && task.assigneeId) {
+    const assigneeId = task.assigneeId; // Capture the value to satisfy TypeScript
+    const oldAssigneeId = existingTask?.assigneeId;
     // Run notifications asynchronously
     (async () => {
       try {
@@ -248,12 +251,12 @@ export async function updateTask(taskId: string, data: Prisma.TaskUncheckedUpdat
 
         // Fetch assignee email from database
         const assignee = await prisma.user.findUnique({
-          where: { id: task.assigneeId },
+          where: { id: assigneeId },
           select: { email: true, name: true },
         });
 
         if (!assignee) {
-          console.error(`⚠️ Assignee not found: ${task.assigneeId}`);
+          console.error(`⚠️ Assignee not found: ${assigneeId}`);
           return;
         }
 
@@ -262,8 +265,8 @@ export async function updateTask(taskId: string, data: Prisma.TaskUncheckedUpdat
         // Create in-app notification
         if (assigneeChanged) {
           await notifyTaskReassignment({
-            newAssigneeId: task.assigneeId,
-            oldAssigneeId: existingTask?.assigneeId || undefined,
+            newAssigneeId: assigneeId,
+            oldAssigneeId: oldAssigneeId || undefined,
             taskId: task.id,
             taskTitle: task.title,
             assignerName: task.createdBy?.name || "Someone",
@@ -272,7 +275,7 @@ export async function updateTask(taskId: string, data: Prisma.TaskUncheckedUpdat
           console.log("✅ Reassignment notification created");
         } else if (newlyAssigned) {
           await notifyTaskAssignment({
-            assigneeId: task.assigneeId,
+            assigneeId: assigneeId,
             taskId: task.id,
             taskTitle: task.title,
             assignerName: task.createdBy?.name || "Someone",
