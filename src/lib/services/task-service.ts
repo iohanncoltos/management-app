@@ -177,10 +177,18 @@ export async function createTask(data: Prisma.TaskUncheckedCreateInput) {
       try {
         console.log(`📧 Task "${task.title}" assigned to user ${assigneeId}`);
 
-        // Fetch assignee email from database
+        // Fetch assignee email and preferences from database
         const assignee = await prisma.user.findUnique({
           where: { id: assigneeId },
-          select: { email: true, name: true },
+          select: {
+            email: true,
+            name: true,
+            preference: {
+              select: {
+                emailNotifications: true,
+              },
+            },
+          },
         });
 
         if (!assignee) {
@@ -200,8 +208,9 @@ export async function createTask(data: Prisma.TaskUncheckedCreateInput) {
         });
         console.log("✅ In-app notification created");
 
-        // Send email notification
-        if (assignee.email) {
+        // Send email notification only if user has email notifications enabled
+        const emailNotificationsEnabled = assignee.preference?.emailNotifications ?? true;
+        if (assignee.email && emailNotificationsEnabled) {
           await sendTaskAssignmentEmail({
             to: assignee.email,
             taskTitle: task.title,
@@ -213,6 +222,8 @@ export async function createTask(data: Prisma.TaskUncheckedCreateInput) {
             taskId: task.id,
           });
           console.log(`✅ Email sent to ${assignee.email}`);
+        } else if (assignee.email && !emailNotificationsEnabled) {
+          console.log(`⏭️ Email notifications disabled for ${assignee.email}, skipping email`);
         }
       } catch (error) {
         console.error("❌ Failed to send task notifications:");
@@ -249,10 +260,18 @@ export async function updateTask(taskId: string, data: Prisma.TaskUncheckedUpdat
       try {
         console.log(`📧 Task "${task.title}" assignment change detected`);
 
-        // Fetch assignee email from database
+        // Fetch assignee email and preferences from database
         const assignee = await prisma.user.findUnique({
           where: { id: assigneeId },
-          select: { email: true, name: true },
+          select: {
+            email: true,
+            name: true,
+            preference: {
+              select: {
+                emailNotifications: true,
+              },
+            },
+          },
         });
 
         if (!assignee) {
@@ -284,8 +303,9 @@ export async function updateTask(taskId: string, data: Prisma.TaskUncheckedUpdat
           console.log("✅ Assignment notification created");
         }
 
-        // Send email notification
-        if (assignee.email) {
+        // Send email notification only if user has email notifications enabled
+        const emailNotificationsEnabled = assignee.preference?.emailNotifications ?? true;
+        if (assignee.email && emailNotificationsEnabled) {
           await sendTaskAssignmentEmail({
             to: assignee.email,
             taskTitle: task.title,
@@ -297,6 +317,8 @@ export async function updateTask(taskId: string, data: Prisma.TaskUncheckedUpdat
             taskId: task.id,
           });
           console.log(`✅ Email sent to ${assignee.email}`);
+        } else if (assignee.email && !emailNotificationsEnabled) {
+          console.log(`⏭️ Email notifications disabled for ${assignee.email}, skipping email`);
         }
       } catch (error) {
         console.error("❌ Failed to send task notifications:");
