@@ -154,7 +154,8 @@ export function useDeleteNotification() {
 export function useNotificationAlerts() {
   const { data } = useUnreadCount();
   const { playSound } = useNotificationSound();
-  const previousCountRef = useRef<number>(0);
+  const previousCountRef = useRef<number | null>(null);
+  const lastPlayedRef = useRef<number>(0);
 
   useEffect(() => {
     if (!data) return;
@@ -162,9 +163,21 @@ export function useNotificationAlerts() {
     const currentCount = data.count;
     const previousCount = previousCountRef.current;
 
+    // Initialize on first load (don't play sound)
+    if (previousCount === null) {
+      previousCountRef.current = currentCount;
+      return;
+    }
+
     // Play sound only if count increased (new notification arrived)
-    if (currentCount > previousCount && previousCount > 0) {
+    // And not within the last 2 seconds (prevent duplicate sounds)
+    const now = Date.now();
+    const timeSinceLastPlay = now - lastPlayedRef.current;
+
+    if (currentCount > previousCount && timeSinceLastPlay > 2000) {
+      console.log(`🔔 New notification! Count: ${previousCount} → ${currentCount}`);
       playSound();
+      lastPlayedRef.current = now;
     }
 
     previousCountRef.current = currentCount;
