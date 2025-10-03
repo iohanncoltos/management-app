@@ -173,8 +173,17 @@ export async function createTask(data: Prisma.TaskUncheckedCreateInput) {
   if (task.assigneeId) {
     console.log(`📧 Preparing to send task assignment notification`);
     console.log(`Task: "${task.title}" assigned to user ${task.assigneeId} by ${task.createdBy?.name || "Unknown"}`);
+    console.log(`Assignee data from task:`, JSON.stringify(task.assignee));
 
     try {
+      // Fetch assignee email directly from database to ensure we have it
+      const assignee = await prisma.user.findUnique({
+        where: { id: task.assigneeId },
+        select: { email: true, name: true },
+      });
+
+      console.log(`Assignee fetched from DB:`, JSON.stringify(assignee));
+
       // Create in-app notification (always create if there's an assignee)
       console.log("Creating in-app notification...");
       await notifyTaskAssignment({
@@ -186,11 +195,11 @@ export async function createTask(data: Prisma.TaskUncheckedCreateInput) {
       });
       console.log("✅ In-app notification created");
 
-      // Send email only if assignee has an email address
-      if (task.assignee?.email) {
-        console.log(`Sending email to ${task.assignee.email} via Resend...`);
+      // Send email if we have the assignee's email
+      if (assignee?.email) {
+        console.log(`Sending email to ${assignee.email} via Resend...`);
         await sendTaskAssignmentEmail({
-          to: task.assignee.email,
+          to: assignee.email,
           taskTitle: task.title,
           start: task.start,
           end: task.end,
@@ -201,7 +210,8 @@ export async function createTask(data: Prisma.TaskUncheckedCreateInput) {
         });
         console.log("✅ Email sent successfully");
       } else {
-        console.log("⚠️ Assignee has no email address - skipping email notification");
+        console.error("⚠️ Could not fetch assignee email from database!");
+        console.error(`AssigneeId: ${task.assigneeId}`);
       }
     } catch (error) {
       console.error("❌ Failed to send task assignment notification:");
@@ -236,6 +246,14 @@ export async function updateTask(taskId: string, data: Prisma.TaskUncheckedUpdat
     console.log(`📧 Task reassignment/assignment detected for user ${task.assigneeId}`);
 
     try {
+      // Fetch assignee email directly from database to ensure we have it
+      const assignee = await prisma.user.findUnique({
+        where: { id: task.assigneeId },
+        select: { email: true, name: true },
+      });
+
+      console.log(`Assignee fetched from DB:`, JSON.stringify(assignee));
+
       // Create in-app notification
       if (assigneeChanged) {
         // Task was reassigned
@@ -262,11 +280,11 @@ export async function updateTask(taskId: string, data: Prisma.TaskUncheckedUpdat
         console.log("✅ Assignment notification created");
       }
 
-      // Send email only if assignee has an email address
-      if (task.assignee?.email) {
-        console.log(`Sending assignment/reassignment email to ${task.assignee.email}...`);
+      // Send email if we have the assignee's email
+      if (assignee?.email) {
+        console.log(`Sending assignment/reassignment email to ${assignee.email}...`);
         await sendTaskAssignmentEmail({
-          to: task.assignee.email,
+          to: assignee.email,
           taskTitle: task.title,
           start: task.start,
           end: task.end,
@@ -277,7 +295,8 @@ export async function updateTask(taskId: string, data: Prisma.TaskUncheckedUpdat
         });
         console.log("✅ Assignment email sent successfully");
       } else {
-        console.log("⚠️ Assignee has no email address - skipping email notification");
+        console.error("⚠️ Could not fetch assignee email from database!");
+        console.error(`AssigneeId: ${task.assigneeId}`);
       }
     } catch (error) {
       console.error("❌ Failed to send task assignment notification:");
