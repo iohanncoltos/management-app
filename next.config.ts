@@ -48,6 +48,7 @@ const devHeaders = baseHeaders;
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  serverExternalPackages: ['pdfkit'],
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Fix for pdfkit in Next.js - these modules cause issues in serverless
@@ -57,6 +58,18 @@ const nextConfig: NextConfig = {
         encoding: false,
       };
     }
+
+    // Handle font files for pdfkit
+    config.module = config.module || {};
+    config.module.rules = config.module.rules || [];
+    config.module.rules.push({
+      test: /\.(afm|ttf|otf|pfb)$/,
+      type: 'asset/resource',
+      generator: {
+        filename: 'static/fonts/[name][ext]'
+      }
+    });
+
     return config;
   },
   async headers() {

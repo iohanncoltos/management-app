@@ -63,7 +63,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const projectStr = report.project?.name.replace(/\s+/g, "_") || "General";
     const filename = `DailyReport_${dateStr}_${projectStr}.pdf`;
 
-    return new NextResponse(pdfBuffer as any, {
+    return new NextResponse(pdfBuffer as BodyInit, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,

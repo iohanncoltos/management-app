@@ -206,7 +206,7 @@ export default function DailyReportPage() {
 
           {/* Tomorrow's Plan */}
           <div className="space-y-2">
-            <Label htmlFor="tomorrowPlan">Tomorrow's Plan (Optional)</Label>
+            <Label htmlFor="tomorrowPlan">Tomorrow&apos;s Plan (Optional)</Label>
             <Textarea
               id="tomorrowPlan"
               placeholder="What do you plan to work on tomorrow..."

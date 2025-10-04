@@ -10,8 +10,8 @@ export interface DailyReport {
   blockers: string | null;
   tomorrowPlan: string | null;
   hoursWorked: number | null;
-  tasksCompleted: any;
-  tasksInProgress: any;
+  tasksCompleted: unknown;
+  tasksInProgress: unknown;
   status: "DRAFT" | "SUBMITTED";
   submittedAt: string | null;
   emailedTo: string | null;

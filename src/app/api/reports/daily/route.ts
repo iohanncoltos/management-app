@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     const endDate = searchParams.get("endDate");
     const limit = parseInt(searchParams.get("limit") || "50");
 
-    const where: any = {
+    const where: { userId: string; projectId?: string; status?: 'DRAFT' | 'SUBMITTED'; reportDate?: { gte: Date; lte: Date } } = {
       userId: session.user.id,
     };
 
@@ -27,18 +27,25 @@ export async function GET(request: Request) {
       where.projectId = projectId;
     }
 
-    if (status) {
+    if (status && (status === 'DRAFT' || status === 'SUBMITTED')) {
       where.status = status;
     }
 
-    if (startDate || endDate) {
-      where.reportDate = {};
-      if (startDate) {
-        where.reportDate.gte = new Date(startDate);
-      }
-      if (endDate) {
-        where.reportDate.lte = new Date(endDate);
-      }
+    if (startDate && endDate) {
+      where.reportDate = {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
+      };
+    } else if (startDate) {
+      where.reportDate = {
+        gte: new Date(startDate),
+        lte: new Date(),
+      };
+    } else if (endDate) {
+      where.reportDate = {
+        gte: new Date(0),
+        lte: new Date(endDate),
+      };
     }
 
     const reports = await prisma.dailyReport.findMany({

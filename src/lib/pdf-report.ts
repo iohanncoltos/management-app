@@ -10,8 +10,8 @@ interface DailyReportData {
   blockers?: string | null;
   tomorrowPlan?: string | null;
   hoursWorked?: number | null;
-  tasksCompleted?: any;
-  tasksInProgress?: any;
+  tasksCompleted?: unknown;
+  tasksInProgress?: unknown;
   status: string;
   submittedAt?: Date | null;
 }
@@ -26,12 +26,16 @@ export async function generateDailyReportPDF(report: DailyReportData): Promise<B
       size: "A4",
       margins: { top: 50, bottom: 50, left: 50, right: 50 },
       bufferPages: true,
+      autoFirstPage: true,
     });
 
     const buffers: Buffer[] = [];
     doc.on("data", buffers.push.bind(buffers));
     doc.on("end", () => resolve(Buffer.concat(buffers)));
     doc.on("error", reject);
+
+    // Use standard PDF fonts (no external files needed)
+    doc.font('Helvetica');
 
     // Color scheme matching the app
     const colors = {
@@ -120,7 +124,7 @@ export async function generateDailyReportPDF(report: DailyReportData): Promise<B
 
       doc.moveDown(0.5);
 
-      report.tasksCompleted.forEach((task: any) => {
+      report.tasksCompleted.forEach((task: { title: string; projectName?: string }) => {
         doc
           .fontSize(10)
           .fillColor(colors.text)
@@ -151,7 +155,7 @@ export async function generateDailyReportPDF(report: DailyReportData): Promise<B
 
       doc.moveDown(0.5);
 
-      report.tasksInProgress.forEach((task: any) => {
+      report.tasksInProgress.forEach((task: { title: string; progress: number }) => {
         doc
           .fontSize(10)
           .fillColor(colors.text)

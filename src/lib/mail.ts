@@ -662,7 +662,7 @@ export async function sendDailyReportEmail({
     .filter(Boolean)
     .join("\n");
 
-  const emailData: any = {
+  const emailData: { from: string; to: string[]; subject: string; html: string; text: string; attachments?: Array<{ filename: string; content: Buffer }> } = {
     from: env.server.RESEND_FROM_EMAIL,
     to,
     subject: `Daily Work Report - ${dateStr}${projectName ? ` - ${projectName}` : ""}`,
@@ -681,5 +681,24 @@ export async function sendDailyReportEmail({
     ];
   }
 
-  await resend.emails.send(emailData);
+  try {
+    console.log("📧 Attempting to send email with data:", {
+      from: emailData.from,
+      to: emailData.to,
+      subject: emailData.subject,
+      hasAttachment: !!emailData.attachments,
+    });
+
+    const result = await resend.emails.send(emailData);
+    console.log("✅ Daily report email sent successfully:", {
+      recipients: to,
+      messageId: result.data?.id,
+      error: result.error,
+      fullResult: result,
+    });
+    return result;
+  } catch (error) {
+    console.error("❌ Failed to send daily report email:", error);
+    throw error;
+  }
 }

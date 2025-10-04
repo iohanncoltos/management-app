@@ -111,6 +111,15 @@ export async function POST(request: Request, context: RouteContext) {
     // Remove the report author's own email
     recipients.delete(report.user.email);
 
+    console.log("📧 Email recipients collected:", {
+      total: recipients.size,
+      recipients: Array.from(recipients),
+      admins: admins.length,
+      projectCreator: report.project?.createdBy?.email,
+      projectMembers: report.project?.memberships?.length || 0,
+      additionalEmails: additionalEmails?.length || 0,
+    });
+
     if (recipients.size === 0) {
       return NextResponse.json(
         { message: "No recipients found. Please add email addresses manually." },
