@@ -105,14 +105,33 @@ export default function DailyReportPage() {
   };
 
   const handleExport = async () => {
-    if (!savedReportId) {
-      toast.error("Please save the report first");
+    if (!workSummary.trim()) {
+      toast.error("Please add a work summary before exporting");
       return;
     }
 
     try {
-      await exportReport.mutateAsync(savedReportId);
-      toast.success("Report exported successfully");
+      let reportId = savedReportId;
+
+      // If not saved yet, save as draft first
+      if (!reportId) {
+        const result = await createReport.mutateAsync({
+          reportDate,
+          projectId: projectId && projectId !== "none" ? projectId : null,
+          workSummary,
+          blockers,
+          tomorrowPlan,
+          hoursWorked: hoursWorked ? parseFloat(hoursWorked) : null,
+          status: "DRAFT",
+        });
+        reportId = result.id;
+        setSavedReportId(reportId);
+      }
+
+      if (reportId) {
+        await exportReport.mutateAsync(reportId);
+        toast.success("Report exported successfully");
+      }
     } catch (error) {
       toast.error("Failed to export report");
     }
@@ -246,20 +265,18 @@ export default function DailyReportPage() {
               Save Draft
             </Button>
 
-            {savedReportId && (
-              <Button
-                variant="secondary"
-                onClick={handleExport}
-                disabled={isLoading}
-              >
-                {exportReport.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-2 h-4 w-4" />
-                )}
-                Export PDF
-              </Button>
-            )}
+            <Button
+              variant="secondary"
+              onClick={handleExport}
+              disabled={isLoading}
+            >
+              {exportReport.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Export PDF
+            </Button>
 
             <Button
               onClick={handleSubmitAndEmail}
