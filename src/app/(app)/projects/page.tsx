@@ -88,13 +88,13 @@ export default async function ProjectsPage() {
   const canCreateProjects = session.user.permissions?.includes(CREATE_PROJECT) ?? false;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader
         title="Mission Portfolio"
         description="Command center for all active and planned engagements."
         actions={
           canCreateProjects ? (
-            <Button asChild>
+            <Button asChild size="sm" className="w-full sm:w-auto">
               <Link href="/projects/new">Deploy mission</Link>
             </Button>
           ) : null

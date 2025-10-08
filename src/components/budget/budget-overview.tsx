@@ -97,13 +97,13 @@ export function BudgetOverview({ projects, workspaces, canCreateWorkspace, curre
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader
         title="Budget Management"
         description="Switch between project budgets and custom workspaces to plan, track, and reconcile spending."
         actions={
           canCreateWorkspace ? (
-            <Button onClick={() => setDialogOpen(true)} className="flex items-center gap-2">
+            <Button onClick={() => setDialogOpen(true)} size="sm" className="flex w-full items-center gap-2 sm:w-auto">
               <Plus className="h-4 w-4" />
               New Workspace
             </Button>
@@ -111,17 +111,19 @@ export function BudgetOverview({ projects, workspaces, canCreateWorkspace, curre
         }
       />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="w-full justify-start gap-2 overflow-x-auto">
-          <TabsTrigger value="projects" className="flex items-center gap-2">
-            <Calculator className="h-4 w-4" />
-            Project Budgets
-            <Badge variant="outline" className="ml-1">{projects.length}</Badge>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+        <TabsList className="w-full justify-start gap-1 overflow-x-auto sm:gap-2">
+          <TabsTrigger value="projects" className="flex items-center gap-1 text-xs sm:gap-2 sm:text-sm">
+            <Calculator className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Project Budgets</span>
+            <span className="sm:hidden">Projects</span>
+            <Badge variant="outline" className="ml-1 text-xs">{projects.length}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="custom" className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4" />
-            Custom Workspaces
-            <Badge variant="outline" className="ml-1">{workspaceList.length}</Badge>
+          <TabsTrigger value="custom" className="flex items-center gap-1 text-xs sm:gap-2 sm:text-sm">
+            <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Custom Workspaces</span>
+            <span className="sm:hidden">Workspaces</span>
+            <Badge variant="outline" className="ml-1 text-xs">{workspaceList.length}</Badge>
           </TabsTrigger>
         </TabsList>
 
@@ -138,7 +140,7 @@ export function BudgetOverview({ projects, workspaces, canCreateWorkspace, curre
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
               {projects.map((project) => {
                 const status = statusVariants[project.status] ?? statusVariants.PLANNING;
                 const planned = project.budgetPlanned ?? 0;
@@ -148,26 +150,28 @@ export function BudgetOverview({ projects, workspaces, canCreateWorkspace, curre
                 return (
                   <Card key={project.id} className="transition-shadow hover:shadow-md">
                     <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0 flex-1 space-y-1">
                           <CardTitle className="truncate text-lg">{project.name}</CardTitle>
                           <p className="font-mono text-sm text-muted-foreground">{project.code}</p>
                         </div>
-                        <Badge variant={status.variant}>{status.label}</Badge>
+                        <Badge variant={status.variant} className="self-start sm:self-auto">
+                          {status.label}
+                        </Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                           <span className="text-muted-foreground">Planned Budget</span>
                           <span className="font-semibold">€{planned.toLocaleString()}</span>
                         </div>
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                           <span className="text-muted-foreground">Current Spend</span>
                           <span className="font-semibold">€{actual.toLocaleString()}</span>
                         </div>
                         {planned > 0 ? (
-                          <div className="flex items-center justify-between">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                             <span className="text-muted-foreground">Variance</span>
                             <span
                               className={`font-semibold ${
@@ -180,8 +184,8 @@ export function BudgetOverview({ projects, workspaces, canCreateWorkspace, curre
                           </div>
                         ) : null}
                       </div>
-                      <Button asChild className="w-full">
-                        <Link href={`/budget/${project.id}`} className="inline-flex items-center gap-2">
+                      <Button asChild className="w-full sm:w-auto">
+                        <Link href={`/budget/${project.id}`} className="inline-flex w-full items-center justify-center gap-2 sm:w-auto sm:justify-start">
                           <Calculator className="h-4 w-4" />
                           Manage Budget
                           <ExternalLink className="h-4 w-4" />
@@ -213,7 +217,7 @@ export function BudgetOverview({ projects, workspaces, canCreateWorkspace, curre
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
               {workspaceList.map((workspace) => {
                 const planned = workspace.planned ?? 0;
                 const actual = workspace.actual ?? 0;
@@ -223,7 +227,7 @@ export function BudgetOverview({ projects, workspaces, canCreateWorkspace, curre
                 return (
                   <Card key={workspace.id} className="transition-shadow hover:shadow-md">
                     <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0 flex-1 space-y-1">
                           <CardTitle className="truncate text-lg">{workspace.name}</CardTitle>
                           {workspace.project ? (
@@ -234,7 +238,7 @@ export function BudgetOverview({ projects, workspaces, canCreateWorkspace, curre
                             <p className="text-sm text-muted-foreground">Standalone workspace</p>
                           )}
                         </div>
-                        {isMine ? <Badge variant="outline">Mine</Badge> : null}
+                        {isMine ? <Badge variant="outline" className="self-start sm:self-auto">Mine</Badge> : null}
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -242,16 +246,16 @@ export function BudgetOverview({ projects, workspaces, canCreateWorkspace, curre
                         <p className="line-clamp-2 text-sm text-muted-foreground">{workspace.description}</p>
                       ) : null}
                       <div className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                           <span className="text-muted-foreground">Planned</span>
                           <span className="font-semibold">€{planned.toLocaleString()}</span>
                         </div>
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                           <span className="text-muted-foreground">Actual</span>
                           <span className="font-semibold">€{actual.toLocaleString()}</span>
                         </div>
                         {planned > 0 ? (
-                          <div className="flex items-center justify-between">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                             <span className="text-muted-foreground">Variance</span>
                             <span
                               className={`font-semibold ${
@@ -264,8 +268,8 @@ export function BudgetOverview({ projects, workspaces, canCreateWorkspace, curre
                           </div>
                         ) : null}
                       </div>
-                      <Button asChild className="w-full">
-                        <Link href={`/budget/workspaces/${workspace.id}`} className="inline-flex items-center gap-2">
+                      <Button asChild className="w-full sm:w-auto">
+                        <Link href={`/budget/workspaces/${workspace.id}`} className="inline-flex w-full items-center justify-center gap-2 sm:w-auto sm:justify-start">
                           <Sparkles className="h-4 w-4" />
                           Open Workspace
                           <ExternalLink className="h-4 w-4" />

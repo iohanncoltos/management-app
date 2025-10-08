@@ -44,13 +44,14 @@ export default async function ProjectBudgetPage({ params }: ProjectBudgetPagePro
   );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
       <Card>
-        <CardHeader>
-          <CardTitle>Budget Health</CardTitle>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-base sm:text-lg">Budget Health</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col items-center gap-4">
-          <DoughnutChart
+        <CardContent className="flex flex-col items-center gap-4 p-4 sm:p-6">
+          <div className="h-[200px] w-[200px] sm:h-[240px] sm:w-[240px]">
+            <DoughnutChart
             data={{
               labels: ["Planned", "Actual"],
               datasets: [
@@ -61,8 +62,12 @@ export default async function ProjectBudgetPage({ params }: ProjectBudgetPagePro
                 },
               ],
             }}
-          />
-          <div className="w-full space-y-2 text-sm text-muted-foreground">
+              options={{
+                maintainAspectRatio: false,
+              }}
+            />
+          </div>
+          <div className="w-full space-y-2 text-xs text-muted-foreground sm:text-sm">
             <div className="flex items-center justify-between">
               <span>Planned</span>
               <span className="text-foreground font-semibold">
@@ -86,10 +91,10 @@ export default async function ProjectBudgetPage({ params }: ProjectBudgetPagePro
       </Card>
       {canAdjustBudget ? (
         <Card>
-          <CardHeader>
-            <CardTitle>Adjust Financials</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Adjust Financials</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
             <BudgetAdjustForm projectId={project.id} budgetPlanned={planned} budgetActual={actual} />
           </CardContent>
         </Card>

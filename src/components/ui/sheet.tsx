@@ -1,6 +1,7 @@
 "use client";
 
 import * as SheetPrimitive from "@radix-ui/react-dialog";
+import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -11,6 +12,7 @@ const SheetClose = SheetPrimitive.Close;
 const SheetPortal = SheetPrimitive.Portal;
 const SheetTitle = SheetPrimitive.Title;
 const SheetDescription = SheetPrimitive.Description;
+const VisuallyHidden = VisuallyHiddenPrimitive.Root;
 
 const SheetOverlay = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Overlay>,
@@ -78,4 +80,5 @@ export {
   SheetPortal,
   SheetTitle,
   SheetTrigger,
+  VisuallyHidden,
 };

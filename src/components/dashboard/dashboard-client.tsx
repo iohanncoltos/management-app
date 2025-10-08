@@ -96,8 +96,8 @@ export function DashboardClient({ metrics, performance, taskBreakdown, upcoming 
   };
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           title="Active Missions"
           value={String(metrics.totalProjects)}
@@ -128,46 +128,52 @@ export function DashboardClient({ metrics, performance, taskBreakdown, upcoming 
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-7">
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-7">
         <Card className="lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Budget Trajectory</CardTitle>
-            <CardDescription>Compare planned mission budgets against actual spend.</CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Budget Trajectory</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Compare planned mission budgets against actual spend.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <BarChart
-              data={budgetChartData}
-              options={{
-                responsive: true,
-                plugins: { legend: { position: "bottom" } },
-                scales: {
-                  x: { stacked: false },
-                  y: {
-                    ticks: { callback: (value) => `$${Number(value).toLocaleString()}` },
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <div className="h-[250px] sm:h-[300px]">
+              <BarChart
+                data={budgetChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { position: "bottom" } },
+                  scales: {
+                    x: { stacked: false },
+                    y: {
+                      ticks: { callback: (value) => `$${Number(value).toLocaleString()}` },
+                    },
                   },
-                },
-              }}
-            />
+                }}
+              />
+            </div>
           </CardContent>
         </Card>
         <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Execution Status</CardTitle>
-            <CardDescription>Live distribution of task states across missions.</CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Execution Status</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Live distribution of task states across missions.</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col items-center">
-            <DoughnutChart
-              data={breakdownData}
-              options={{
-                plugins: {
-                  legend: { position: "bottom" },
-                },
-              }}
-              size={240}
-            />
-            <div className="mt-4 grid w-full grid-cols-2 gap-3 text-sm">
+          <CardContent className="flex flex-col items-center p-4 sm:p-6">
+            <div className="h-[200px] w-[200px] sm:h-[240px] sm:w-[240px]">
+              <DoughnutChart
+                data={breakdownData}
+                options={{
+                  plugins: {
+                    legend: { position: "bottom" },
+                  },
+                  maintainAspectRatio: false,
+                }}
+                size={240}
+              />
+            </div>
+            <div className="mt-4 grid w-full grid-cols-2 gap-2 text-xs sm:gap-3 sm:text-sm">
               {Object.entries(taskBreakdown).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between rounded-2xl bg-secondary/40 px-4 py-2">
+                <div key={key} className="flex items-center justify-between rounded-2xl bg-secondary/40 px-3 py-2 sm:px-4">
                   <span className="capitalize text-muted-foreground">{key}</span>
                   <span className="font-semibold text-foreground">{value}</span>
                 </div>
@@ -177,81 +183,87 @@ export function DashboardClient({ metrics, performance, taskBreakdown, upcoming 
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-7">
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-7">
         <Card className="lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Completion Trend</CardTitle>
-            <CardDescription>Progress velocity across active initiatives.</CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Completion Trend</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Progress velocity across active initiatives.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <LineChart
-              data={completionTrendData}
-              options={{
-                plugins: { legend: { display: false } },
-                scales: {
-                  y: {
-                    min: 0,
-                    max: 100,
-                    ticks: { callback: (value) => `${value}%` },
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <div className="h-[250px] sm:h-[300px]">
+              <LineChart
+                data={completionTrendData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                    y: {
+                      min: 0,
+                      max: 100,
+                      ticks: { callback: (value) => `${value}%` },
+                    },
                   },
-                },
-              }}
-            />
+                }}
+              />
+            </div>
           </CardContent>
         </Card>
         <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Upcoming Milestones</CardTitle>
-            <CardDescription>Next critical deliverables across mission teams.</CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Upcoming Milestones</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Next critical deliverables across mission teams.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Task</TableHead>
-                  <TableHead>Mission</TableHead>
-                  <TableHead>Due</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {upcoming.map((task) => {
-                  const dueDate = typeof task.end === "string" ? new Date(task.end) : task.end;
-                  return (
-                    <TableRow key={task.id}>
-                      <TableCell className="space-y-1">
-                        <p className="text-sm font-semibold text-foreground">{task.title}</p>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={task.progress === 100 ? "success" : task.progress === 0 ? "default" : "warning"}>
-                            {task.progress}%
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {task.project ? (
-                          <>
-                            <span className="text-sm font-medium text-foreground">{task.project.code}</span>
-                            <p className="text-xs text-muted-foreground">{task.project.name}</p>
-                          </>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">No Project</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm text-foreground">{format(dueDate, "dd MMM")}</div>
-                        <div className="text-xs text-muted-foreground">{formatDistanceToNow(dueDate, { addSuffix: true })}</div>
+          <CardContent className="p-0 sm:p-6 sm:pt-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[150px]">Task</TableHead>
+                    <TableHead className="hidden min-w-[120px] sm:table-cell">Mission</TableHead>
+                    <TableHead className="min-w-[100px]">Due</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {upcoming.map((task) => {
+                    const dueDate = typeof task.end === "string" ? new Date(task.end) : task.end;
+                    return (
+                      <TableRow key={task.id}>
+                        <TableCell className="space-y-1">
+                          <p className="text-xs font-semibold text-foreground sm:text-sm">{task.title}</p>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={task.progress === 100 ? "success" : task.progress === 0 ? "default" : "warning"} className="text-xs">
+                              {task.progress}%
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {task.project ? (
+                            <>
+                              <span className="text-sm font-medium text-foreground">{task.project.code}</span>
+                              <p className="text-xs text-muted-foreground">{task.project.name}</p>
+                            </>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">No Project</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-xs text-foreground sm:text-sm">{format(dueDate, "dd MMM")}</div>
+                          <div className="text-xs text-muted-foreground">{formatDistanceToNow(dueDate, { addSuffix: true })}</div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {upcoming.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="py-6 text-center text-xs text-muted-foreground sm:text-sm">
+                        No upcoming milestones scheduled.
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-                {upcoming.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="py-6 text-center text-sm text-muted-foreground">
-                      No upcoming milestones scheduled.
-                    </TableCell>
-                  </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>

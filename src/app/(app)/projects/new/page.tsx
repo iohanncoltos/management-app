@@ -60,7 +60,7 @@ export default async function NewProjectPage() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader
         title="Deploy New Mission"
         description="Define mission parameters, budget envelope, and scheduling horizon."

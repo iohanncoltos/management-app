@@ -15,7 +15,8 @@
       "Bash(npx kill-port:*)",
       "Bash(taskkill:*)",
       "Read(//c/Users/colto/Downloads/**)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npx next:*)"
     ],
     "deny": [],
     "ask": []

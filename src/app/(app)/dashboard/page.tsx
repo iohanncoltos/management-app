@@ -36,18 +36,18 @@ export default async function DashboardPage() {
         title="Mission Control Overview"
         description="Live operational snapshot across all Intermax initiatives."
         actions={
-          <div className="flex items-center gap-2">
-            <Button asChild variant="ghost">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <Button asChild variant="ghost" size="sm" className="w-full sm:w-auto">
               <Link href="/api/dashboard/export?format=csv">Export CSV</Link>
             </Button>
-            <Button asChild variant="ghost">
+            <Button asChild variant="ghost" size="sm" className="w-full sm:w-auto">
               <Link href="/api/dashboard/export?format=pdf">Export PDF</Link>
             </Button>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
               <Link href="/projects">Project Register</Link>
             </Button>
             {canCreateProjects ? (
-              <Button asChild>
+              <Button asChild size="sm" className="w-full sm:w-auto">
                 <Link href="/projects/new">New Mission</Link>
               </Button>
             ) : null}

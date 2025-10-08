@@ -41,3 +41,51 @@ a {
   background-image: radial-gradient(circle at top left, rgba(176, 54, 54, 0.35), transparent 55%),
     linear-gradient(135deg, rgba(15, 17, 21, 0.95), rgba(22, 26, 34, 0.95));
 }
+
+/* Mobile-optimized touch targets */
+@media (max-width: 640px) {
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Responsive table utilities */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile-friendly card spacing */
+@media (max-width: 640px) {
+  .card-mobile-compact {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+}
+
+/* Prevent horizontal scroll on small screens */
+@media (max-width: 640px) {
+  body {
+    overflow-x: hidden;
+  }
+}
+
+/* Improved scrollbar for tables on mobile */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: rgba(22, 26, 34, 0.3);
+  border-radius: 3px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: rgba(176, 54, 54, 0.5);
+  border-radius: 3px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(176, 54, 54, 0.7);
+}

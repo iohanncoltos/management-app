@@ -31,19 +31,19 @@ export function Topbar({ user }: TopbarProps) {
     .padEnd(2, " ");
 
   return (
-    <header className="sticky top-0 z-40 flex h-20 items-center justify-between border-b border-border/60 bg-background/80 px-6 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border/60 bg-background/80 px-4 backdrop-blur-xl sm:h-20 sm:px-6">
       <div className="flex items-center gap-3">
         <MobileSidebar user={user} />
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <NotificationBell />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-3 rounded-2xl">
-              <Avatar className="h-10 w-10 border border-border/60">
+            <Button variant="ghost" className="gap-2 rounded-2xl sm:gap-3">
+              <Avatar className="h-9 w-9 border border-border/60 sm:h-10 sm:w-10">
                 {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt={user.name} /> : <AvatarFallback>{initials}</AvatarFallback>}
               </Avatar>
-              <div className="flex flex-col items-start leading-4 text-left">
+              <div className="hidden flex-col items-start leading-4 text-left md:flex">
                 <span className="text-sm font-semibold text-foreground">{user.name}</span>
                 <span className="text-xs text-muted-foreground">{user.role ?? ""}</span>
               </div>

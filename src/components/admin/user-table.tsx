@@ -97,16 +97,17 @@ export function UserTable({ users, roles, currentUserId }: UserTableProps) {
   };
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Role</TableHead>
-          <TableHead>Permissions</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="min-w-[150px]">Name</TableHead>
+            <TableHead className="min-w-[180px]">Email</TableHead>
+            <TableHead className="min-w-[120px]">Role</TableHead>
+            <TableHead className="hidden min-w-[200px] lg:table-cell">Permissions</TableHead>
+            <TableHead className="min-w-[180px] text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
       <TableBody>
         {rows.map((user) => {
           const assignedRole = user.role ? roleMap.get(user.role.id) ?? user.role : null;
@@ -124,7 +125,7 @@ export function UserTable({ users, roles, currentUserId }: UserTableProps) {
                   <Badge variant="outline">Unassigned</Badge>
                 )}
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden lg:table-cell">
                 <div className="flex flex-wrap gap-1">
                   {(assignedRole?.permissions ?? []).slice(0, 3).map((permission) => (
                     <Badge key={permission} variant="outline" className="text-xs">
@@ -139,13 +140,13 @@ export function UserTable({ users, roles, currentUserId }: UserTableProps) {
                 </div>
               </TableCell>
               <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end">
                   <Select
                     defaultValue={assignedRole?.id ?? UNASSIGNED_VALUE}
                     onValueChange={(value) => handleRoleChange(user.id, value)}
                     disabled={isPending || user.id === currentUserId}
                   >
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger className="w-full sm:w-40">
                       <SelectValue placeholder="Assign role" />
                     </SelectTrigger>
                     <SelectContent>
@@ -195,5 +196,6 @@ export function UserTable({ users, roles, currentUserId }: UserTableProps) {
         })}
       </TableBody>
     </Table>
+    </div>
   );
 }

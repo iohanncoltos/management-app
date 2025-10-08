@@ -8,7 +8,7 @@ import { BadgeCheck, Menu } from "lucide-react";
 import { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, VisuallyHidden } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export type SidebarUser = {
@@ -78,7 +78,7 @@ function SidebarContent({ user, footer }: { user: SidebarUser; footer?: ReactNod
     .padEnd(2, " ");
 
   return (
-    <div className="flex h-full flex-col gap-6">
+    <div className="flex h-full flex-col">
       <div className="flex items-center justify-between">
         <Link href="/home" className="group">
           <p className="font-display text-lg font-semibold tracking-wide group-hover:text-accent">Intermax</p>
@@ -86,14 +86,16 @@ function SidebarContent({ user, footer }: { user: SidebarUser; footer?: ReactNod
         </Link>
         <BadgeCheck className="h-5 w-5 text-accent" />
       </div>
-      <div className="flex flex-col gap-8">
-        <NavigationList items={primaryNav} userPermissions={user.permissions} />
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Admin & Alerts</p>
-          <NavigationList items={secondaryNav} userPermissions={user.permissions} />
+      <div className="mt-6 flex-1 overflow-y-auto pr-1 sm:pr-0">
+        <div className="flex flex-col gap-8 pb-6">
+          <NavigationList items={primaryNav} userPermissions={user.permissions} />
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Admin & Alerts</p>
+            <NavigationList items={secondaryNav} userPermissions={user.permissions} />
+          </div>
         </div>
       </div>
-      <div className="mt-auto space-y-4">
+      <div className="mt-4 space-y-4 border-t border-border/60 pt-4">
         <div className="rounded-3xl border border-border/60 bg-secondary/60 p-4">
           <div className="mb-3 flex items-center gap-3">
             <Avatar className="h-12 w-12 border border-border/60">
@@ -131,7 +133,10 @@ export function MobileSidebar({ user, footer }: SidebarProps) {
           <span className="sr-only">Open navigation</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-80 border-border/60 bg-background/95">
+      <SheetContent side="left" className="flex w-80 flex-col border-border/60 bg-background/95 p-6">
+        <VisuallyHidden>
+          <SheetTitle>Navigation Menu</SheetTitle>
+        </VisuallyHidden>
         <SidebarContent user={user} footer={footer} />
       </SheetContent>
     </Sheet>
