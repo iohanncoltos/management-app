@@ -17,6 +17,8 @@ const DEFAULT_DESCRIPTIONS: Record<SystemRoleName, string> = {
   MECHANICAL_ENGINEER: "Mechanical engineering contributor",
   ELECTRICAL_ENGINEER: "Electrical engineering contributor",
   SYSTEM_ENGINEER: "Systems engineering contributor",
+  USER: "Standard user who can view projects and create reports, but cannot assign tasks or create projects",
+  VIEWER: "Read-only access to basic information and personal tasks",
 };
 
 const DEFAULT_ROLES = SYSTEM_ROLE_NAMES.map((name) => ({

@@ -153,7 +153,6 @@ export function UserTable({ users, roles, currentUserId }: UserTableProps) {
                       {roles.map((role) => (
                         <SelectItem key={role.id} value={role.id}>
                           {role.name}
-                          {role.isSystem ? " �" : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>

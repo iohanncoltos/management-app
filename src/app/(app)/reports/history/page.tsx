@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { FileText, Download, Mail, Trash2, Calendar } from "lucide-react";
+import { FileText, Download, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -25,7 +24,7 @@ export default function ReportHistoryPage() {
     try {
       await deleteReport.mutateAsync(reportId);
       toast.success("Report deleted");
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete report");
     }
   };
@@ -34,7 +33,7 @@ export default function ReportHistoryPage() {
     try {
       await exportReport.mutateAsync(reportId);
       toast.success("Report exported");
-    } catch (error) {
+    } catch {
       toast.error("Failed to export report");
     }
   };

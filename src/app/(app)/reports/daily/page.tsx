@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, Send, Download, Save, Loader2 } from "lucide-react";
+import { Send, Download, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,7 @@ export default function DailyReportPage() {
       });
       setSavedReportId(result.id);
       toast.success("Draft saved successfully");
-    } catch (error) {
+    } catch {
       toast.error("Failed to save draft");
     }
   };
@@ -99,7 +99,7 @@ export default function DailyReportPage() {
 
       // Redirect to history after short delay
       setTimeout(() => router.push("/reports/history"), 1500);
-    } catch (error) {
+    } catch {
       toast.error("Failed to submit report");
     }
   };
@@ -132,7 +132,7 @@ export default function DailyReportPage() {
         await exportReport.mutateAsync(reportId);
         toast.success("Report exported successfully");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to export report");
     }
   };

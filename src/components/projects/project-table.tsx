@@ -77,7 +77,7 @@ export function ProjectTable({ projects }: ProjectTableProps) {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     <div>{startDate ? format(startDate, "dd MMM yyyy") : "TBD"}</div>
-                    {endDate ? <div>â†’ {format(endDate, "dd MMM yyyy")}</div> : <div>â†’ TBD</div>}
+                    {endDate ? <div>→ {format(endDate, "dd MMM yyyy")}</div> : <div>→ TBD</div>}
                   </TableCell>
                   <TableCell className="w-48">
                     <div className="flex items-center gap-3">

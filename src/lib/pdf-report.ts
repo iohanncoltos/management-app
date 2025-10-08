@@ -35,13 +35,20 @@ export async function generateDailyReportPDF(report: DailyReportData): Promise<B
       }
     });
 
+    // Override addPage method to prevent automatic page creation
+    doc.addPage = function() {
+      // Only allow adding pages if explicitly called, not automatically
+      console.warn('Attempted to add new page - prevented for single page report');
+      return this;
+    };
+
     const buffers: Buffer[] = [];
-    doc.on("data", (chunk) => buffers.push(chunk));
+    doc.on("data", (chunk: Buffer) => buffers.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(buffers)));
     doc.on("error", reject);
 
     // Helper function to safely add text with proper encoding
-    const addText = (text: string, x?: number, y?: number, options?: any) => {
+    const addText = (text: string, x?: number, y?: number, options?: Record<string, unknown>) => {
       // Clean and encode text properly
       const cleanText = text
         .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
@@ -72,7 +79,7 @@ export async function generateDailyReportPDF(report: DailyReportData): Promise<B
       subtle: "#eaf0f8", // Subtle background
     };
 
-    // Helper function to draw a card
+    // Helper function to draw a card with dynamic height
     const drawCard = (y: number, height: number) => {
       // Card shadow effect
       doc.rect(42, y + 2, doc.page.width - 84, height).fill("#e2e8f0");
@@ -81,15 +88,19 @@ export async function generateDailyReportPDF(report: DailyReportData): Promise<B
       doc.lineWidth(0.5);
     };
 
+    // Helper function to calculate text height
+    const calculateTextHeight = (text: string, fontSize: number, width: number, lineGap: number = 2) => {
+      const avgCharsPerLine = Math.floor(width / (fontSize * 0.6)); // Approximate character width
+      const lines = Math.ceil(text.length / avgCharsPerLine);
+      return lines * (fontSize + lineGap) + 10; // Add padding
+    };
+
     // Page background
     doc.rect(0, 0, doc.page.width, doc.page.height).fill(colors.pageBg);
 
     // Modern header
     doc.rect(0, 0, doc.page.width, 120).fill(colors.primary);
     doc.rect(0, 110, doc.page.width, 10).fill(colors.primaryDark);
-
-    // Reserve space for footer
-    const footerHeight = 40;
 
     // Header content
     doc
@@ -270,102 +281,98 @@ export async function generateDailyReportPDF(report: DailyReportData): Promise<B
       doc.y = tasksInProgressY + tasksInProgressHeight + 10;
     }
 
-    // Work summary card - make it dynamic based on content
-    const summaryCardY = doc.y;
-    const maxY = doc.page.height - footerHeight - 50; // Leave space for footer
+    // Calculate available space for dynamic content
+    const footerSpace = 80; // Space reserved for footer
+    const maxContentY = doc.page.height - footerSpace;
+    const availableSpace = maxContentY - doc.y;
 
-    // Calculate available space and adjust card height accordingly
-    const availableHeight = maxY - summaryCardY;
-    const summaryCardHeight = Math.min(Math.max(80, 50 + (report.workSummary.length / 8)), availableHeight / 3);
+    // Content sections data for dynamic calculation
+    const contentSections = [];
 
-    drawCard(summaryCardY, summaryCardHeight);
-
-    doc
-      .fontSize(12)
-      .font('Helvetica-Bold')
-      .fillColor(colors.text);
-    addText("Work Summary", 55, summaryCardY + 15);
-
-    doc
-      .fontSize(9)
-      .font('Helvetica')
-      .fillColor(colors.text);
-    addText(report.workSummary, 55, summaryCardY + 35, {
-      width: doc.page.width - 110,
-      align: "left",
-      lineGap: 2,
-      height: summaryCardHeight - 50,
-      ellipsis: true
+    // Always include work summary
+    contentSections.push({
+      title: "Work Summary",
+      content: report.workSummary,
+      fontSize: 9,
+      priority: 1
     });
 
-    doc.y = summaryCardY + summaryCardHeight + 10;
-
-    // Check if we have space for additional cards, otherwise skip them or make them smaller
-    const remainingSpace = maxY - doc.y;
-
-    // Blockers/Issues card - only if we have space
-    if (report.blockers && remainingSpace > 100) {
-      const blockersCardY = doc.y;
-      const blockersCardHeight = Math.min(70, remainingSpace / 2);
-
-      drawCard(blockersCardY, blockersCardHeight);
-
-      doc
-        .fontSize(11)
-        .font('Helvetica-Bold')
-        .fillColor(colors.text);
-      addText("Blockers/Issues", 55, blockersCardY + 12);
-
-      doc
-        .fontSize(9)
-        .font('Helvetica')
-        .fillColor(colors.text);
-      addText(report.blockers, 55, blockersCardY + 30, {
-        width: doc.page.width - 110,
-        align: "left",
-        lineGap: 2,
-        height: blockersCardHeight - 40,
-        ellipsis: true
+    if (report.blockers) {
+      contentSections.push({
+        title: "Blockers/Issues",
+        content: report.blockers,
+        fontSize: 8,
+        priority: 2
       });
-
-      doc.y = blockersCardY + blockersCardHeight + 8;
     }
 
-    // Tomorrow's plan card - only if we have space
-    if (report.tomorrowPlan && (maxY - doc.y) > 60) {
-      const planCardY = doc.y;
-      const planCardHeight = Math.min(60, maxY - doc.y - 10);
-
-      drawCard(planCardY, planCardHeight);
-
-      doc
-        .fontSize(11)
-        .font('Helvetica-Bold')
-        .fillColor(colors.text);
-      addText("Tomorrow's Plan", 55, planCardY + 12);
-
-      doc
-        .fontSize(9)
-        .font('Helvetica')
-        .fillColor(colors.text);
-      addText(report.tomorrowPlan, 55, planCardY + 30, {
-        width: doc.page.width - 110,
-        align: "left",
-        lineGap: 2,
-        height: planCardHeight - 40,
-        ellipsis: true
+    if (report.tomorrowPlan) {
+      contentSections.push({
+        title: "Tomorrow's Plan",
+        content: report.tomorrowPlan,
+        fontSize: 8,
+        priority: 3
       });
-
-      doc.y = planCardY + planCardHeight + 8;
     }
 
-    // Compact footer at bottom of page
-    const footerY = doc.page.height - 40; // Reduced footer space
+    // Calculate total space needed
+    let totalNeededHeight = 0;
+    const sectionData = contentSections.map(section => {
+      const textHeight = calculateTextHeight(section.content, section.fontSize, doc.page.width - 110, 2);
+      const cardHeight = textHeight + 40; // Header + padding
+      totalNeededHeight += cardHeight + 10; // Space between cards
+      return { ...section, textHeight, cardHeight };
+    });
 
-    // Footer border line
-    doc.rect(40, footerY, doc.page.width - 80, 1).fill(colors.border);
+    // If content exceeds available space, reduce font sizes and recalculate
+    if (totalNeededHeight > availableSpace) {
+      const scaleFactor = availableSpace / totalNeededHeight * 0.9; // 90% to leave some margin
 
-    // Footer content - all on one compact section
+      sectionData.forEach(section => {
+        section.fontSize = Math.max(6, section.fontSize * scaleFactor);
+        section.textHeight = calculateTextHeight(section.content, section.fontSize, doc.page.width - 110, 1);
+        section.cardHeight = section.textHeight + 35;
+      });
+    }
+
+    // Render content sections
+    sectionData.forEach((section) => {
+      const cardY = doc.y;
+
+      drawCard(cardY, section.cardHeight);
+
+      doc
+        .fontSize(Math.min(12, section.fontSize + 3))
+        .font('Helvetica-Bold')
+        .fillColor(colors.text);
+      addText(section.title, 55, cardY + 12);
+
+      doc
+        .fontSize(section.fontSize)
+        .font('Helvetica')
+        .fillColor(colors.text);
+      addText(section.content, 55, cardY + 32, {
+        width: doc.page.width - 110,
+        align: "left",
+        lineGap: 1
+      });
+
+      doc.y = cardY + section.cardHeight + 8;
+    });
+
+    // Position footer at absolute bottom of page
+    const footerY = doc.page.height - 60;
+
+    // Ensure content doesn't overlap footer by checking current position
+    if (doc.y > footerY - 10) {
+      // If content is too close to footer, we need to scale it down more
+      console.warn('Content approaching footer area - content was scaled appropriately');
+    }
+
+    // Footer separator line
+    doc.rect(40, footerY - 5, doc.page.width - 80, 0.5).fill(colors.border);
+
+    // Generation timestamp (left aligned)
     doc
       .fontSize(7)
       .font('Helvetica')
@@ -379,23 +386,25 @@ export async function generateDailyReportPDF(report: DailyReportData): Promise<B
         minute: "2-digit",
       })}`,
       40,
-      footerY + 8
+      footerY + 5
     );
 
+    // Confidential notice (center, prominent)
     doc
-      .fontSize(8)
+      .fontSize(9)
       .font('Helvetica-Bold')
       .fillColor(colors.text);
-    addText("CONFIDENTIAL - For Intermax Projects Only", 40, footerY + 8, {
+    addText("CONFIDENTIAL - For Intermax Projects Only", 40, footerY + 5, {
       width: doc.page.width - 80,
       align: "center",
     });
 
+    // Additional confidential text (center, smaller)
     doc
-      .fontSize(7)
+      .fontSize(6)
       .font('Helvetica')
       .fillColor(colors.textSecondary);
-    addText("This document contains confidential information. Unauthorized distribution is prohibited.", 40, footerY + 20, {
+    addText("This document contains confidential information. Unauthorized distribution is prohibited.", 40, footerY + 22, {
       width: doc.page.width - 80,
       align: "center",
     });

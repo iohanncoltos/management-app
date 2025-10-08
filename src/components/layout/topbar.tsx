@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { LogOut, Search, Settings, User } from "lucide-react";
+import { LogOut, Settings, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,8 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { MobileSidebar, type SidebarUser } from "./sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationBell } from "./notification-bell";
@@ -36,12 +34,6 @@ export function Topbar({ user }: TopbarProps) {
     <header className="sticky top-0 z-40 flex h-20 items-center justify-between border-b border-border/60 bg-background/80 px-6 backdrop-blur-xl">
       <div className="flex items-center gap-3">
         <MobileSidebar user={user} />
-        <div className="relative hidden items-center rounded-2xl border border-border/60 bg-secondary/60 px-4 lg:flex">
-          <Search className="mr-2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Quick search" className="h-10 border-none bg-transparent focus-visible:ring-0" />
-          <Separator orientation="vertical" className="mx-3 h-6" />
-          <span className="text-xs uppercase tracking-widest text-muted-foreground">CTRL + K</span>
-        </div>
       </div>
       <div className="flex items-center gap-3">
         <NotificationBell />

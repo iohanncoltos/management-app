@@ -4,6 +4,8 @@ export const SYSTEM_ROLE_NAMES = [
   "MECHANICAL_ENGINEER",
   "ELECTRICAL_ENGINEER",
   "SYSTEM_ENGINEER",
+  "USER",
+  "VIEWER",
 ] as const;
 
 export type SystemRoleName = typeof SYSTEM_ROLE_NAMES[number];
@@ -42,6 +44,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<SystemRoleName, PermissionAction[]
   MECHANICAL_ENGINEER: ["VIEW_PROJECT", "VIEW_REPORTS"],
   ELECTRICAL_ENGINEER: ["VIEW_PROJECT", "VIEW_REPORTS"],
   SYSTEM_ENGINEER: ["VIEW_PROJECT", "VIEW_REPORTS"],
+  USER: ["VIEW_PROJECT", "VIEW_REPORTS"], // Can view projects and create reports, but cannot assign tasks
+  VIEWER: ["VIEW_REPORTS"], // Minimal permissions - can only view basic info
 };
 
 export function isSystemRole(name?: string | null): boolean {

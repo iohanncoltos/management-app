@@ -15,7 +15,6 @@ const FALLBACK_SOUND = "data:audio/wav;base64,UklGRhwAAABXQVZFZm10IBAAAAABAAEARK
 export function useNotificationSound() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [canPlay, setCanPlay] = useState(false);
-  const hasPlayedRef = useRef(false);
   const { data: preferences } = useNotificationPreferences();
 
   useEffect(() => {
