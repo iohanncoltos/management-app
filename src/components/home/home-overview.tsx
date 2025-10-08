@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Icon } from "@/components/ui/icon";
 import { HomeOverviewData } from "@/lib/services/home-service";
 
 const weekdayLabels = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"] as const;
@@ -72,7 +73,7 @@ export function HomeOverview({ userName, data }: HomeOverviewProps) {
           </div>
           <div className="w-full max-w-sm">
             <div className="flex items-center gap-3 rounded-3xl border border-border/60 bg-background/70 px-5 py-3 shadow-sm">
-              <Search className="h-4 w-4 text-muted-foreground" />
+              <Icon icon={Search} className="h-4 w-4 text-muted-foreground" />
               <Input placeholder="Search anything…" className="border-none bg-transparent p-0 text-sm focus-visible:ring-0" />
             </div>
           </div>
@@ -89,10 +90,10 @@ export function HomeOverview({ userName, data }: HomeOverviewProps) {
               </div>
               <div className="flex gap-2">
                 <Button variant="ghost" size="icon" onClick={() => setMonth(subMonths(month, 1))}>
-                  <ChevronLeft className="h-4 w-4" />
+                  <Icon icon={ChevronLeft} className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="icon" onClick={() => setMonth(addMonths(month, 1))}>
-                  <ChevronRight className="h-4 w-4" />
+                  <Icon icon={ChevronRight} className="h-4 w-4" />
                 </Button>
               </div>
             </CardHeader>
@@ -134,7 +135,7 @@ export function HomeOverview({ userName, data }: HomeOverviewProps) {
               <Button variant="ghost" size="sm" className="gap-2" asChild>
                 <Link href="/projects">
                   View all
-                  <ArrowRight className="h-4 w-4" />
+                  <Icon icon={ArrowRight} className="h-4 w-4" />
                 </Link>
               </Button>
             </CardHeader>
@@ -203,7 +204,7 @@ export function HomeOverview({ userName, data }: HomeOverviewProps) {
                 <Button variant="ghost" size="sm" className="gap-2" asChild>
                   <Link href="/resources">
                     Directory
-                    <ArrowRight className="h-4 w-4" />
+                    <Icon icon={ArrowRight} className="h-4 w-4" />
                   </Link>
                 </Button>
               </CardHeader>
@@ -236,7 +237,7 @@ export function HomeOverview({ userName, data }: HomeOverviewProps) {
                   <Button key={link.href} variant="outline" className="justify-between rounded-2xl border-border/60" asChild>
                     <Link href={link.href}>
                       {link.label}
-                      <ArrowRight className="h-4 w-4" />
+                      <Icon icon={ArrowRight} className="h-4 w-4" />
                     </Link>
                   </Button>
                 ))}

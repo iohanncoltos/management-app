@@ -57,11 +57,13 @@ export const config = {
     "/register",
     "/home",
     "/dashboard",
+    "/chat",
     "/projects/:path*",
     "/admin/:path*",
     "/api/projects/:path*",
     "/api/tasks/:path*",
     "/api/files/:path*",
     "/api/resources/:path*",
+    "/api/chat/:path*",
   ],
 };

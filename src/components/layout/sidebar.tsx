@@ -10,6 +10,7 @@ import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, VisuallyHidden } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Icon } from "@/components/ui/icon";
 
 export type SidebarUser = {
   name: string;
@@ -44,7 +45,6 @@ function NavigationList({ items, userPermissions }: { items: NavItem[]; userPerm
       {items
         .filter((item) => canAccess(item, userPermissions))
         .map((item) => {
-          const Icon = item.icon;
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
@@ -58,7 +58,7 @@ function NavigationList({ items, userPermissions }: { items: NavItem[]; userPerm
               )}
             >
               <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-secondary/60 text-muted-foreground group-hover:text-foreground">
-                <Icon className="h-4 w-4" />
+                <Icon icon={item.icon} className="h-4 w-4" />
               </span>
               <span>{item.label}</span>
             </Link>
@@ -84,7 +84,7 @@ function SidebarContent({ user, footer }: { user: SidebarUser; footer?: ReactNod
           <p className="font-display text-lg font-semibold tracking-wide group-hover:text-accent">Intermax</p>
           <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground group-hover:text-foreground">Command</p>
         </Link>
-        <BadgeCheck className="h-5 w-5 text-accent" />
+        <Icon icon={BadgeCheck} className="h-5 w-5 text-accent" />
       </div>
       <div className="mt-6 flex-1 overflow-y-auto pr-1 sm:pr-0">
         <div className="flex flex-col gap-8 pb-6">
@@ -129,7 +129,7 @@ export function MobileSidebar({ user, footer }: SidebarProps) {
     <Sheet>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="lg:hidden">
-          <Menu className="h-5 w-5" />
+          <Icon icon={Menu} className="h-5 w-5" />
           <span className="sr-only">Open navigation</span>
         </Button>
       </SheetTrigger>

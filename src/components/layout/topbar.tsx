@@ -16,6 +16,8 @@ import {
 import { MobileSidebar, type SidebarUser } from "./sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationBell } from "./notification-bell";
+import { ChatBell } from "./chat-bell";
+import { Icon } from "@/components/ui/icon";
 
 interface TopbarProps {
   user: SidebarUser;
@@ -36,6 +38,7 @@ export function Topbar({ user }: TopbarProps) {
         <MobileSidebar user={user} />
       </div>
       <div className="flex items-center gap-2 sm:gap-3">
+        <ChatBell />
         <NotificationBell />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -59,17 +62,17 @@ export function Topbar({ user }: TopbarProps) {
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild className="text-sm">
               <Link href="/profile" className="flex items-center gap-2">
-                <User className="h-4 w-4" /> Profile
+                <Icon icon={User} className="h-4 w-4" /> Profile
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild className="text-sm">
               <Link href="/preferences" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" /> Preferences
+                <Icon icon={Settings} className="h-4 w-4" /> Preferences
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2 text-sm text-destructive" onSelect={() => signOut({ callbackUrl: "/login" })}>
-              <LogOut className="h-4 w-4" /> Logout
+              <Icon icon={LogOut} className="h-4 w-4" /> Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

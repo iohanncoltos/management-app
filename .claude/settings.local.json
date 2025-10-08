@@ -16,7 +16,9 @@
       "Bash(taskkill:*)",
       "Read(//c/Users/colto/Downloads/**)",
       "Bash(find:*)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Read(//c/Users/colto/Pictures/Screenshots/**)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []
