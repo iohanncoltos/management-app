@@ -181,20 +181,22 @@ export function UserTaskDashboard({ stats, projects }: UserTaskDashboardProps) {
     }
 
     return (
-      <TaskTable
-        tasks={taskList}
-        isLoading={isLoading}
-        canManage={false}
-        canUpdateProgress={true}
-        onTaskUpdate={handleTaskUpdated}
-        sort={sort}
-        onSortChange={setSort}
-      />
+      <div className="overflow-x-auto">
+        <TaskTable
+          tasks={taskList}
+          isLoading={isLoading}
+          canManage={false}
+          canUpdateProgress={true}
+          onTaskUpdate={handleTaskUpdated}
+          sort={sort}
+          onSortChange={setSort}
+        />
+      </div>
     );
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:space-y-8">
       <TaskStatsCards stats={stats} onQuickAction={handleQuickAction} />
 
       {/* Today's Focus Section */}
@@ -204,20 +206,23 @@ export function UserTaskDashboard({ stats, projects }: UserTaskDashboardProps) {
         onMarkComplete={handleMarkComplete}
       />
 
-      <div className="grid gap-6 lg:grid-cols-12">
-        <div className="lg:col-span-9">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <div className="flex items-center justify-between">
-              <TabsList>
-                <TabsTrigger value="active">Active Tasks</TabsTrigger>
-                <TabsTrigger value="all">All Tasks</TabsTrigger>
-                <TabsTrigger value="overdue">Overdue</TabsTrigger>
-              </TabsList>
+      <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
+        <div className="space-y-5 lg:col-span-9 lg:space-y-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5 sm:space-y-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="w-full overflow-x-auto sm:w-auto">
+                <TabsList className="flex w-full min-w-max justify-start sm:min-w-0 sm:justify-start">
+                  <TabsTrigger value="active">Active Tasks</TabsTrigger>
+                  <TabsTrigger value="all">All Tasks</TabsTrigger>
+                  <TabsTrigger value="overdue">Overdue</TabsTrigger>
+                </TabsList>
+              </div>
 
-              <div className="flex items-center gap-2">
+              <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-1 sm:flex sm:items-center sm:gap-2">
                 <Button
                   variant={viewMode === "cards" ? "default" : "outline"}
                   size="sm"
+                  className="w-full"
                   onClick={() => setViewMode("cards")}
                 >
                   <Layout className="h-4 w-4" />
@@ -225,6 +230,7 @@ export function UserTaskDashboard({ stats, projects }: UserTaskDashboardProps) {
                 <Button
                   variant={viewMode === "table" ? "default" : "outline"}
                   size="sm"
+                  className="w-full"
                   onClick={() => setViewMode("table")}
                 >
                   <List className="h-4 w-4" />

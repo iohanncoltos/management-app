@@ -219,15 +219,76 @@ export function RoleManager({ roles: initialRoles, defaultPermissions }: RoleMan
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
           Manage custom command roles and their associated permissions. System roles are read-only.
         </p>
-        <Button onClick={openCreateDialog} disabled={isPending}>
+        <Button onClick={openCreateDialog} disabled={isPending} className="w-full sm:w-auto justify-center">
           <Plus className="mr-2 h-4 w-4" /> New Role
         </Button>
       </div>
-      <Table>
+
+      <div className="grid gap-3 md:hidden">
+        {sortedRoles.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
+            No roles defined yet.
+          </div>
+        ) : (
+          sortedRoles.map((role) => (
+            <div key={role.id} className="rounded-2xl border border-border/60 bg-background/70 p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-base font-semibold text-foreground">{role.name}</p>
+                  <p className="text-xs text-muted-foreground">{role.description ?? "No description provided."}</p>
+                </div>
+                <Badge variant={role.isSystem ? "default" : "outline"} className="gap-1">
+                  {role.isSystem ? <Lock className="h-3 w-3" /> : null}
+                  {role.isSystem ? "System" : "Custom"}
+                </Badge>
+              </div>
+              <div className="mt-4 space-y-2">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Permissions</p>
+                <div className="flex flex-wrap gap-2">
+                  {role.permissions.length === 0 ? (
+                    <span className="text-xs text-muted-foreground">None assigned</span>
+                  ) : (
+                    role.permissions.map((permission) => (
+                      <Badge key={permission} variant="outline" className="text-xs">
+                        {permission}
+                      </Badge>
+                    ))
+                  )}
+                </div>
+              </div>
+              <div className="mt-4 grid gap-2 sm:flex sm:items-center sm:justify-end sm:gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  onClick={() => openEditDialog(role)}
+                  disabled={role.isSystem}
+                >
+                  <PenLine className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  onClick={() => deleteRole(role.id)}
+                  disabled={role.isSystem || isPending}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
+        <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
@@ -288,7 +349,8 @@ export function RoleManager({ roles: initialRoles, defaultPermissions }: RoleMan
             </TableRow>
           ))}
         </TableBody>
-      </Table>
+        </Table>
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => (!open ? closeDialog() : setDialogOpen(true))}>
         <DialogContent>

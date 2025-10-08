@@ -11,6 +11,8 @@ import {
   Eye,
   MoreHorizontal,
   Loader2,
+  Copy,
+  Trash2,
   User,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -23,6 +25,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -40,6 +43,8 @@ interface TaskCardProps {
   onTaskUpdate?: () => void;
   onViewDetails?: (task: TaskWithDetails) => void;
   onEditProgress?: (task: TaskWithDetails) => void;
+  onDuplicate?: (task: TaskWithDetails) => void;
+  onDelete?: (task: TaskWithDetails) => void;
   className?: string;
 }
 
@@ -48,6 +53,8 @@ export function TaskCard({
   onTaskUpdate,
   onViewDetails,
   onEditProgress,
+  onDuplicate,
+  onDelete,
   className = "",
 }: TaskCardProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -141,6 +148,19 @@ export function TaskCard({
                   Mark Complete
                 </DropdownMenuItem>
               )}
+              {(onDuplicate || onDelete) && <DropdownMenuSeparator />}
+              {onDuplicate ? (
+                <DropdownMenuItem onClick={() => onDuplicate(task)}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Duplicate
+                </DropdownMenuItem>
+              ) : null}
+              {onDelete ? (
+                <DropdownMenuItem onClick={() => onDelete(task)} className="text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
