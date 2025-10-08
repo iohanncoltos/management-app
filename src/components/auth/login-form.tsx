@@ -18,7 +18,11 @@ import { Input } from "@/components/ui/input";
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+  const rawCallback = searchParams.get("callbackUrl");
+  const callbackUrl =
+    rawCallback && rawCallback.startsWith("/")
+      ? rawCallback
+      : "/home";
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof loginSchema>>({
