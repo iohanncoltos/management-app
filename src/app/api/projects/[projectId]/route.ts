@@ -150,3 +150,39 @@ export async function PATCH(request: Request, context: RouteContext) {
     throw error;
   }
 }
+
+export async function DELETE(_request: Request, context: RouteContext) {
+  try {
+    const { projectId } = await context.params;
+    const session = await requireSession();
+
+    // Only admins or users with MANAGE_USERS permission can delete projects
+    const hasPermission = session.user.permissions.includes("MANAGE_USERS");
+    if (!hasPermission) {
+      throw new AuthorizationError("Forbidden - only admins can delete projects", 403);
+    }
+
+    // Check if project exists
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, name: true },
+    });
+
+    if (!project) {
+      return NextResponse.json({ message: "Project not found" }, { status: 404 });
+    }
+
+    // Delete the project (cascading deletes will handle related records)
+    await prisma.project.delete({
+      where: { id: projectId },
+    });
+
+    return NextResponse.json({ message: "Project deleted successfully" }, { status: 200 });
+  } catch (error) {
+    const handled = handleAuthError(error);
+    if (handled) return handled;
+
+    console.error("Error deleting project:", error);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
+}

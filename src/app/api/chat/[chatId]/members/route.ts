@@ -1,68 +1,53 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { requireSession } from "@/lib/authz";
+import { prisma } from "@/lib/db";
 
-import { auth } from "@/lib/auth";
-import { addChatMember, removeChatMember } from "@/lib/services/chat-service";
+type RouteContext = { params: Promise<{ chatId: string }> };
 
-/**
- * POST /api/chat/:chatId/members - Add a member to the chat (admin only)
- */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ chatId: string }> }
-) {
+export async function GET(_request: Request, context: RouteContext) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { chatId } = await context.params;
+    const session = await requireSession();
+
+    // Verify user is a member of this chat
+    const isMember = await prisma.chatMember.findUnique({
+      where: {
+        chatId_userId: {
+          chatId,
+          userId: session.user.id,
+        },
+      },
+    });
+
+    if (!isMember) {
+      return NextResponse.json({ error: "Not a member of this chat" }, { status: 403 });
     }
 
-    const { chatId } = await params;
-    const body = await request.json();
-    const { userId } = body;
+    // Fetch all chat members
+    const members = await prisma.chatMember.findMany({
+      where: { chatId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: {
+        user: {
+          name: "asc",
+        },
+      },
+    });
 
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
+    const formattedMembers = members.map((m) => m.user);
 
-    const member = await addChatMember(chatId, session.user.id, userId);
-    return NextResponse.json({ member });
+    return NextResponse.json({ members: formattedMembers });
   } catch (error) {
-    console.error("Error adding member:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to add member" },
-      { status: error instanceof Error && error.message.includes("admin") ? 403 : 500 }
-    );
-  }
-}
-
-/**
- * DELETE /api/chat/:chatId/members/:userId - Remove a member from the chat (admin only)
- */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ chatId: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { chatId } = await params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
-
-    await removeChatMember(chatId, session.user.id, userId);
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error removing member:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to remove member" },
-      { status: error instanceof Error && error.message.includes("admin") ? 403 : 500 }
-    );
+    console.error("Error fetching chat members:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

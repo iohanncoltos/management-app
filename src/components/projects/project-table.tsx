@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DeleteProjectDialog } from "@/components/projects/delete-project-dialog";
 
 
 interface ProjectItem {
@@ -28,6 +29,7 @@ interface ProjectItem {
 
 interface ProjectTableProps {
   projects: ProjectItem[];
+  canDelete?: boolean;
 }
 
 const statusVariants: Record<string, { label: string; variant: "default" | "warning" | "success" | "danger" }> = {
@@ -38,7 +40,7 @@ const statusVariants: Record<string, { label: string; variant: "default" | "warn
   CLOSED: { label: "Closed", variant: "default" },
 };
 
-export function ProjectTable({ projects }: ProjectTableProps) {
+export function ProjectTable({ projects, canDelete = false }: ProjectTableProps) {
   return (
     <Card className="shadow-card">
       <CardContent className="p-0">
@@ -64,7 +66,10 @@ export function ProjectTable({ projects }: ProjectTableProps) {
                       <p className="text-base font-semibold text-foreground">{project.name}</p>
                       <p className="font-mono text-xs uppercase tracking-wide text-muted-foreground">{project.code}</p>
                     </div>
-                    <Badge variant={status.variant} className="w-fit">{status.label}</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={status.variant} className="w-fit">{status.label}</Badge>
+                      {canDelete && <DeleteProjectDialog projectId={project.id} projectName={project.name} />}
+                    </div>
                   </div>
 
                   <div className="mt-4 space-y-3 text-sm text-muted-foreground">
@@ -124,7 +129,7 @@ export function ProjectTable({ projects }: ProjectTableProps) {
                 <TableHead className="min-w-[120px]">Progress</TableHead>
                 <TableHead className="hidden min-w-[120px] lg:table-cell">Budget</TableHead>
                 <TableHead className="hidden min-w-[60px] xl:table-cell">Files</TableHead>
-                <TableHead className="min-w-[100px] text-right">Action</TableHead>
+                <TableHead className={canDelete ? "min-w-[140px] text-right" : "min-w-[100px] text-right"}>Actions</TableHead>
               </TableRow>
             </TableHeader>
           <TableBody>
@@ -169,11 +174,14 @@ export function ProjectTable({ projects }: ProjectTableProps) {
                   </TableCell>
                   <TableCell className="hidden text-sm text-muted-foreground xl:table-cell">{project.filesCount}</TableCell>
                   <TableCell className="text-right">
-                    <Button asChild variant="ghost" size="sm" className="text-accent">
-                      <Link href={`/projects/${project.id}`} className="inline-flex items-center gap-1">
-                        Open <ArrowUpRight className="h-3.5 w-3.5" />
-                      </Link>
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button asChild variant="ghost" size="sm" className="text-accent">
+                        <Link href={`/projects/${project.id}`} className="inline-flex items-center gap-1">
+                          Open <ArrowUpRight className="h-3.5 w-3.5" />
+                        </Link>
+                      </Button>
+                      {canDelete && <DeleteProjectDialog projectId={project.id} projectName={project.name} />}
+                    </div>
                   </TableCell>
                 </TableRow>
               );

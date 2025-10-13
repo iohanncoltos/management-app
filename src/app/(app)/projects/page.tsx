@@ -86,6 +86,7 @@ export default async function ProjectsPage() {
   }));
 
   const canCreateProjects = session.user.permissions?.includes(CREATE_PROJECT) ?? false;
+  const canDeleteProjects = session.user.permissions?.includes(MANAGE_USERS) ?? false;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -100,7 +101,7 @@ export default async function ProjectsPage() {
           ) : null
         }
       />
-      <ProjectTable projects={normalized} />
+      <ProjectTable projects={normalized} canDelete={canDeleteProjects} />
     </div>
   );
 }

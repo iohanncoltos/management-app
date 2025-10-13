@@ -1,14 +1,15 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Send, Paperclip, X } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Icon } from "@/components/ui/icon";
+import { MentionAutocomplete, type MentionUser } from "@/components/chat/mention-autocomplete";
+import { findMentionTrigger, getMentionQuery, formatMention, replaceMentionInText } from "@/lib/utils/mentions";
 
 interface MessageInputProps {
   chatId: string;
@@ -24,9 +25,24 @@ export function MessageInput({ chatId, onFileSelect }: MessageInputProps) {
     size: number;
     mime: string;
   } | null>(null);
+  const [cursorPosition, setCursorPosition] = useState(0);
+  const [mentionTriggerPos, setMentionTriggerPos] = useState<number | null>(null);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
+
+  // Fetch chat members for mentions
+  const { data: chatMembers } = useQuery({
+    queryKey: ["chat-members", chatId],
+    queryFn: async () => {
+      const res = await fetch(`/api/chat/${chatId}/members`);
+      if (!res.ok) throw new Error("Failed to fetch members");
+      const data = await res.json();
+      return data.members as MentionUser[];
+    },
+  });
 
   // Auto-resize textarea as content grows
   useEffect(() => {
@@ -38,6 +54,32 @@ export function MessageInput({ chatId, onFileSelect }: MessageInputProps) {
     // Set height to scrollHeight to fit content
     textarea.style.height = `${textarea.scrollHeight}px`;
   }, [content]);
+
+  // Detect mention trigger
+  useEffect(() => {
+    const triggerPos = findMentionTrigger(content, cursorPosition);
+
+    if (triggerPos !== null) {
+      setMentionTriggerPos(triggerPos);
+      const query = getMentionQuery(content, triggerPos, cursorPosition);
+      setMentionQuery(query);
+      setSelectedMentionIndex(0);
+    } else {
+      setMentionTriggerPos(null);
+      setMentionQuery("");
+    }
+  }, [content, cursorPosition]);
+
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(e.target.value);
+    setCursorPosition(e.target.selectionStart);
+  };
+
+  const handleSelect = () => {
+    if (textareaRef.current) {
+      setCursorPosition(textareaRef.current.selectionStart);
+    }
+  };
 
   const sendMutation = useMutation({
     mutationFn: async ({
@@ -99,7 +141,7 @@ export function MessageInput({ chatId, onFileSelect }: MessageInputProps) {
         const fileData = await onFileSelect(file);
         setUploadedFile(fileData);
         toast.success("File uploaded");
-      } catch (error) {
+      } catch {
         toast.error("Failed to upload file");
         setSelectedFile(null);
       }
@@ -116,10 +158,85 @@ export function MessageInput({ chatId, onFileSelect }: MessageInputProps) {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
+    // Handle mention autocomplete navigation
+    if (mentionTriggerPos !== null && chatMembers) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const showAll = "all".includes(mentionQuery.toLowerCase()) || mentionQuery === "";
+        const totalOptions = (showAll ? 1 : 0) + chatMembers.length;
+        setSelectedMentionIndex((prev) => (prev + 1) % totalOptions);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const showAll = "all".includes(mentionQuery.toLowerCase()) || mentionQuery === "";
+        const totalOptions = (showAll ? 1 : 0) + chatMembers.length;
+        setSelectedMentionIndex((prev) => (prev - 1 + totalOptions) % totalOptions);
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        handleMentionSelect();
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setMentionTriggerPos(null);
+        return;
+      }
+    }
+
+    // Send message on Enter (without Shift)
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleMentionSelect = () => {
+    if (mentionTriggerPos === null || !chatMembers) return;
+
+    const showAll = "all".includes(mentionQuery.toLowerCase()) || mentionQuery === "";
+    let selectedOption: MentionUser | "all";
+
+    if (showAll && selectedMentionIndex === 0) {
+      selectedOption = "all";
+    } else {
+      const userIndex = showAll ? selectedMentionIndex - 1 : selectedMentionIndex;
+      selectedOption = chatMembers[userIndex];
+    }
+
+    insertMention(selectedOption);
+  };
+
+  const insertMention = (selected: MentionUser | "all") => {
+    if (mentionTriggerPos === null) return;
+
+    const before = content.substring(0, mentionTriggerPos);
+    const after = content.substring(cursorPosition);
+
+    let mentionText: string;
+    if (selected === "all") {
+      mentionText = "@all";
+    } else {
+      mentionText = formatMention(selected.name || selected.email, selected.id);
+    }
+
+    const newContent = before + mentionText + " " + after;
+    setContent(newContent);
+    setMentionTriggerPos(null);
+    setMentionQuery("");
+    setSelectedMentionIndex(0);
+
+    // Set cursor position after the mention
+    setTimeout(() => {
+      if (textareaRef.current) {
+        const newPos = before.length + mentionText.length + 1;
+        textareaRef.current.selectionStart = newPos;
+        textareaRef.current.selectionEnd = newPos;
+        textareaRef.current.focus();
+      }
+    }, 0);
   };
 
   const removeFile = () => {
@@ -131,7 +248,7 @@ export function MessageInput({ chatId, onFileSelect }: MessageInputProps) {
   };
 
   return (
-    <div className="border-t p-2 md:p-4">
+    <div className="border-t p-2 md:p-4 relative">
       {selectedFile && (
         <div className="mb-2 flex items-center gap-2 p-2 bg-muted rounded text-xs md:text-sm">
           <Icon icon={Paperclip} className="h-4 w-4" />
@@ -140,6 +257,16 @@ export function MessageInput({ chatId, onFileSelect }: MessageInputProps) {
             <Icon icon={X} className="h-4 w-4" />
           </Button>
         </div>
+      )}
+
+      {/* Mention Autocomplete */}
+      {mentionTriggerPos !== null && chatMembers && (
+        <MentionAutocomplete
+          users={chatMembers}
+          query={mentionQuery}
+          selectedIndex={selectedMentionIndex}
+          onSelect={insertMention}
+        />
       )}
 
       <div className="flex gap-1.5 md:gap-2">
@@ -163,9 +290,10 @@ export function MessageInput({ chatId, onFileSelect }: MessageInputProps) {
 
         <Textarea
           ref={textareaRef}
-          placeholder="Type a message..."
+          placeholder="Type a message... (@mention users or @all)"
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={handleContentChange}
+          onSelect={handleSelect}
           onKeyDown={handleKeyPress}
           disabled={sendMutation.isPending}
           className="resize-none min-h-[40px] md:min-h-[44px] max-h-[160px] md:max-h-[200px] overflow-y-auto text-sm md:text-base"

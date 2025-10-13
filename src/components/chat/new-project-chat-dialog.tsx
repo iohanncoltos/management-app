@@ -3,7 +3,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check } from "lucide-react";
 
 import {
   Dialog,
@@ -57,7 +56,7 @@ export function NewProjectChatDialog({
       const res = await fetch("/api/projects");
       if (!res.ok) throw new Error("Failed to fetch projects");
       const data = await res.json();
-      return data.projects as Project[];
+      return data as Project[];
     },
     enabled: open,
   });
@@ -185,15 +184,15 @@ export function NewProjectChatDialog({
               ) : (
                 <div className="p-2 space-y-1">
                   {filteredUsers?.map((user) => (
-                    <button
+                    <div
                       key={user.id}
                       onClick={() => toggleUser(user.id)}
                       className={cn(
-                        "w-full flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors",
+                        "w-full flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors cursor-pointer",
                         selectedUserIds.has(user.id) && "bg-accent"
                       )}
                     >
-                      <Checkbox checked={selectedUserIds.has(user.id)} />
+                      <Checkbox checked={selectedUserIds.has(user.id)} onCheckedChange={() => toggleUser(user.id)} />
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={user.avatarUrl || undefined} />
                         <AvatarFallback>
@@ -204,7 +203,7 @@ export function NewProjectChatDialog({
                         <p className="text-sm font-medium">{user.name || "Unknown"}</p>
                         <p className="text-xs text-muted-foreground">{user.email}</p>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}

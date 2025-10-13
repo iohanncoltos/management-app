@@ -8,8 +8,6 @@ import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
 interface Chat {
@@ -93,17 +91,31 @@ export function ChatSidebar({
 
     const isCurrentUser = lastMsg.sender.id === currentUserId;
     const senderName = isCurrentUser ? "You" : lastMsg.sender.name || "User";
-    const preview = lastMsg.content.substring(0, 50);
+    const preview = lastMsg.content.substring(0, 30);
+
+    // Format time - show "just now" for very recent, otherwise use distance
+    const messageDate = new Date(lastMsg.createdAt);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - messageDate.getTime()) / 1000);
+
+    let timeText;
+    if (diffInSeconds < 60) {
+      timeText = "now";
+    } else {
+      timeText = formatDistanceToNow(messageDate, { addSuffix: true })
+        .replace("about ", "")
+        .replace(" ago", "");
+    }
 
     return {
-      text: `${senderName}: ${preview}${lastMsg.content.length > 50 ? "..." : ""}`,
-      time: formatDistanceToNow(new Date(lastMsg.createdAt), { addSuffix: true }),
+      text: `${senderName}: ${preview}${lastMsg.content.length > 30 ? "..." : ""}`,
+      time: timeText,
     };
   };
 
   return (
-    <div className="flex h-full flex-col md:border-r">
-      <div className="p-3 md:p-4 space-y-2">
+    <div className="h-full flex flex-col md:border-r">
+      <div className="p-3 md:p-4 space-y-2 shrink-0 border-b">
         <h2 className="text-lg font-semibold">Messages</h2>
         <div className="flex gap-2">
           <Button onClick={onNewDirectMessage} variant="outline" size="sm" className="flex-1 text-xs md:text-sm">
@@ -116,8 +128,7 @@ export function ChatSidebar({
           </Button>
         </div>
       </div>
-      <Separator />
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {isLoading ? (
           <div className="p-4 text-center text-sm text-muted-foreground">Loading chats...</div>
         ) : chats.length === 0 ? (
@@ -141,7 +152,7 @@ export function ChatSidebar({
                   )}
                 >
                   <div className="flex items-start gap-2 md:gap-3">
-                    <div className="relative">
+                    <div className="relative shrink-0">
                       {chat.type === "PROJECT" ? (
                         <div className="h-9 w-9 md:h-10 md:w-10 rounded-full bg-primary/10 flex items-center justify-center">
                           <Users className="h-4 w-4 md:h-5 md:w-5 text-primary" />
@@ -164,21 +175,16 @@ export function ChatSidebar({
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium truncate text-sm md:text-base">{displayName}</p>
+                      <div className="flex items-baseline gap-2 mb-0.5">
+                        <h3 className="font-medium text-sm md:text-base truncate flex-1 min-w-0">{displayName}</h3>
                         {lastMessage && (
-                          <span className="text-xs text-muted-foreground shrink-0">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
                             {lastMessage.time}
                           </span>
                         )}
                       </div>
-                      {chat.type === "PROJECT" && chat.project && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {chat.project.code}
-                        </p>
-                      )}
                       {lastMessage && (
-                        <p className="text-xs md:text-sm text-muted-foreground truncate mt-0.5 md:mt-1">
+                        <p className="text-xs md:text-sm text-muted-foreground truncate">
                           {lastMessage.text}
                         </p>
                       )}
@@ -189,7 +195,7 @@ export function ChatSidebar({
             })}
           </div>
         )}
-      </ScrollArea>
+      </div>
     </div>
   );
 }

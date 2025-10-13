@@ -6,9 +6,9 @@ import { File, Download } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { renderMentionsToHTML } from "@/lib/utils/mentions";
 
 interface Message {
   id: string;
@@ -81,7 +81,7 @@ export function MessageList({ chatId, currentUserId }: MessageListProps) {
       scrollRef.current?.scrollIntoView({ behavior: "smooth" });
     }
     prevMessagesLengthRef.current = messages.length;
-  }, [messages.length]);
+  }, [messages]);
 
   // Initial scroll to bottom
   useEffect(() => {
@@ -174,7 +174,13 @@ export function MessageList({ chatId, currentUserId }: MessageListProps) {
                     message.isDeleted && "italic opacity-60"
                   )}
                 >
-                  <p className="text-sm md:text-base whitespace-pre-wrap break-words">{message.content}</p>
+                  <p className="text-sm md:text-base whitespace-pre-wrap break-words">
+                    <span
+                      dangerouslySetInnerHTML={{
+                        __html: renderMentionsToHTML(message.content, currentUserId)
+                      }}
+                    />
+                  </p>
 
                   {message.fileUrl && !message.isDeleted && (
                     <a

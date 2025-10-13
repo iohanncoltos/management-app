@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
-import { ChatType } from "@prisma/client";
+import { extractMentionedUserIds, hasMentionAll } from "@/lib/utils/mentions";
+import { sendMentionNotifications } from "@/lib/services/mention-notification-service";
 
 /**
  * Create a direct chat between two users
@@ -301,11 +302,17 @@ export async function sendMessage(
     throw new Error("You are not a member of this chat");
   }
 
+  // Extract mentions from content
+  const mentionedUserIds = extractMentionedUserIds(content);
+  const mentionAll = hasMentionAll(content);
+
   const message = await prisma.chatMessage.create({
     data: {
       chatId,
       senderId,
       content,
+      mentions: mentionedUserIds,
+      mentionAll,
       fileUrl,
       fileName,
       fileSize,
@@ -339,6 +346,20 @@ export async function sendMessage(
     where: { id: chatId },
     data: { updatedAt: new Date() },
   });
+
+  // Send mention notifications (async, non-blocking)
+  if (mentionedUserIds.length > 0 || mentionAll) {
+    sendMentionNotifications({
+      chatId,
+      messageId: message.id,
+      senderId,
+      content,
+      mentionedUserIds,
+      mentionAll,
+    }).catch((error) => {
+      console.error("Failed to send mention notifications:", error);
+    });
+  }
 
   return message;
 }

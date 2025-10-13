@@ -58,14 +58,14 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
+    <div className="flex flex-col h-full -m-4 sm:-m-6 lg:-m-8">
       <PageHeader
         title="Messages"
         description="Communicate with your team"
-        className="hidden md:block"
+        className="hidden md:block px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 pb-2 sm:pb-3 lg:pb-4 shrink-0"
       />
 
-      <div className="flex-1 flex overflow-hidden border rounded-lg md:rounded-lg rounded-none min-h-0">
+      <div className="flex-1 flex overflow-hidden border-t min-h-0">
         {/* Sidebar - Hidden on mobile when chat is selected */}
         <div className={`
           w-full md:w-80 md:shrink-0 md:block h-full

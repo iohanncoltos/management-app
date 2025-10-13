@@ -18,12 +18,12 @@ export function AppShell({ user, children, footer }: AppShellProps) {
   useNotificationAlerts();
 
   return (
-    <div className="relative flex min-h-screen bg-background text-foreground">
+    <div className="relative flex h-screen bg-background text-foreground overflow-hidden">
       <Sidebar user={user} footer={footer} />
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="flex h-screen flex-1 flex-col overflow-hidden">
         <Topbar user={user} />
-        <main className="flex-1 px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-          <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:gap-6">
+        <main className="flex-1 px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8 overflow-auto">
+          <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:gap-6 h-full">
             {children}
           </div>
         </main>

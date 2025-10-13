@@ -74,6 +74,7 @@ enum NotificationType {
   PROGRESS_MILESTONE
   TASK_BLOCKED
   TASK_REASSIGNED
+  CHAT_MENTION
 }
 
 enum ReportStatus {
@@ -511,6 +512,9 @@ model ChatMessage {
   senderId    String
 
   content     String   @db.Text
+  mentions    String[] // Array of user IDs mentioned in this message
+  mentionAll  Boolean  @default(false) // True if @all was used
+
   fileUrl     String?  // S3/R2 file URL
   fileName    String?  // Original filename
   fileSize    Int?     // File size in bytes
@@ -531,4 +535,5 @@ model ChatMessage {
 
   @@index([chatId, createdAt])
   @@index([senderId])
+  @@index([mentions])
 }
