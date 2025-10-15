@@ -42,6 +42,8 @@ export default async function AdminUsersPage() {
     name: user.name,
     email: user.email,
     createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : new Date(user.createdAt).toISOString(),
+    cvUrl: user.cvUrl ?? null,
+    cvFileName: user.cvFileName ?? null,
     role: user.role
       ? {
           id: user.role.id,

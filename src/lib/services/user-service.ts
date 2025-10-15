@@ -5,6 +5,8 @@ const userSelection = {
   name: true,
   email: true,
   createdAt: true,
+  cvUrl: true,
+  cvFileName: true,
   role: {
     select: {
       id: true,

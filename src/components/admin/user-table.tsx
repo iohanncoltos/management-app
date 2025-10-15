@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Download } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,8 @@ export type UserRecord = {
   name: string | null;
   email: string;
   createdAt: string;
+  cvUrl: string | null;
+  cvFileName: string | null;
   role: RoleRecord | null;
 };
 
@@ -137,6 +140,20 @@ export function UserTable({ users, roles, currentUserId }: UserTableProps) {
                     )}
                   </div>
                 </div>
+                {user.cvUrl && (
+                  <div className="mt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => window.open(`/api/profile/cv/${user.id}`, "_blank")}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download CV
+                      {user.cvFileName && <span className="ml-1 text-xs text-muted-foreground">({user.cvFileName})</span>}
+                    </Button>
+                  </div>
+                )}
                 <div className="mt-4 space-y-2">
                   <Select
                     defaultValue={assignedRole?.id ?? UNASSIGNED_VALUE}
@@ -201,6 +218,7 @@ export function UserTable({ users, roles, currentUserId }: UserTableProps) {
               <TableHead className="min-w-[180px]">Email</TableHead>
               <TableHead className="min-w-[120px]">Role</TableHead>
               <TableHead className="hidden min-w-[200px] lg:table-cell">Permissions</TableHead>
+              <TableHead className="min-w-[100px]">CV</TableHead>
               <TableHead className="min-w-[180px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -236,6 +254,21 @@ export function UserTable({ users, roles, currentUserId }: UserTableProps) {
                         </Badge>
                       ) : null}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {user.cvUrl ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2"
+                        onClick={() => window.open(`/api/profile/cv/${user.id}`, "_blank")}
+                        title={user.cvFileName ?? "Download CV"}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end">

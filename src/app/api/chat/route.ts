@@ -6,7 +6,7 @@ import { getUserChats } from "@/lib/services/chat-service";
 /**
  * GET /api/chat - Get all chats for the current user
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {

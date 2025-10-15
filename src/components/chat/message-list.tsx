@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { format, isToday, isYesterday } from "date-fns";
 import { File, Download } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -73,7 +73,7 @@ export function MessageList({ chatId, currentUserId }: MessageListProps) {
     enabled: !!chatId,
   });
 
-  const messages = data ?? [];
+  const messages = useMemo(() => data ?? [], [data]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -90,7 +90,7 @@ export function MessageList({ chatId, currentUserId }: MessageListProps) {
         scrollRef.current?.scrollIntoView({ behavior: "auto" });
       }, 100);
     }
-  }, [isLoading, chatId]);
+  }, [isLoading, chatId, messages.length]);
 
   if (isLoading) {
     return (

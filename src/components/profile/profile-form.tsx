@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { ProfileAvatarUploader } from "./profile-avatar";
+import { ProfileCVUploader } from "./profile-cv";
 
 const schema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(80, "First name is too long"),
@@ -25,9 +26,11 @@ interface ProfileFormProps {
   lastName: string;
   email: string;
   avatarUrl: string | null;
+  cvUrl: string | null;
+  cvFileName: string | null;
 }
 
-export function ProfileForm({ firstName, lastName, email, avatarUrl }: ProfileFormProps) {
+export function ProfileForm({ firstName, lastName, email, avatarUrl, cvUrl, cvFileName }: ProfileFormProps) {
   const router = useRouter();
   const { data: session, update } = useSession();
   const [isPending, startTransition] = useTransition();
@@ -123,6 +126,13 @@ export function ProfileForm({ firstName, lastName, email, avatarUrl }: ProfileFo
           <label className="text-sm font-medium text-muted-foreground">Email</label>
           <Input value={email} disabled readOnly />
         </div>
+        <ProfileCVUploader
+          cvUrl={cvUrl}
+          cvFileName={cvFileName}
+          onCVChange={async () => {
+            router.refresh();
+          }}
+        />
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={isPending}>
             {isPending ? "Saving" : "Save changes"}

@@ -4,6 +4,7 @@ import { ProfileForm } from "@/components/profile/profile-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireSession } from "@/lib/authz";
+import { prisma } from "@/lib/db";
 
 function splitName(fullName: string | null | undefined) {
   if (!fullName) {
@@ -28,6 +29,14 @@ export default async function ProfilePage() {
     notFound();
   }
 
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      cvUrl: true,
+      cvFileName: true,
+    },
+  });
+
   const { firstName, lastName } = splitName(session.user.name);
 
   return (
@@ -46,6 +55,8 @@ export default async function ProfilePage() {
             lastName={lastName}
             email={session.user.email ?? ""}
             avatarUrl={session.user.avatarUrl ?? null}
+            cvUrl={user?.cvUrl ?? null}
+            cvFileName={user?.cvFileName ?? null}
           />
         </CardContent>
       </Card>

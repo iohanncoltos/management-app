@@ -106,6 +106,8 @@ model User {
   name                 String?
   passwordHash         String
   avatarUrl            String?
+  cvUrl                String?
+  cvFileName           String?
   roleId               String?
   role                 Role?           @relation(fields: [roleId], references: [id])
   createdAt            DateTime        @default(now())

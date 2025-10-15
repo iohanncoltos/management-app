@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Icon } from "@/components/ui/icon";
 import { MentionAutocomplete, type MentionUser } from "@/components/chat/mention-autocomplete";
-import { findMentionTrigger, getMentionQuery, formatMention, replaceMentionInText } from "@/lib/utils/mentions";
+import { findMentionTrigger, getMentionQuery, formatMention } from "@/lib/utils/mentions";
 
 interface MessageInputProps {
   chatId: string;
